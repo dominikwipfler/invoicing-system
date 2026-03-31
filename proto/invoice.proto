@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package invoice;
+
+service InvoiceService {
+  rpc SaveInvoiceMetadata (Invoice) returns (SaveResponse);
+  rpc GetInvoice (InvoiceRequest) returns (Invoice);
+}
+
+message Invoice {
+  string id = 1;
+  string supplier_name = 2;
+  string invoice_number = 3;
+  float amount = 4;
+  string date = 5;
+}
+
+message InvoiceRequest {
+  string id = 1;
+}
+
+message SaveResponse {
+  bool success = 1;
+  string id = 2;
+  string error = 3;
+}

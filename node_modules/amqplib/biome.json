@@ -1,0 +1,51 @@
+{
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 140,
+    "lineEnding": "lf",
+    "attributePosition": "auto",
+    "includes": ["**/*.js", "!test"]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "complexity": {
+        "noCommaOperator": "error",
+        "noUselessCatch": "error",
+        "useArrowFunction": "error",
+        "useOptionalChain": "off",
+        "noArguments": "error",
+        "useLiteralKeys": "off"
+      },
+      "suspicious": {
+        "noRedundantUseStrict": "error",
+        "noAsyncPromiseExecutor": "off",
+        "noGlobalIsNan": "error",
+        "noGlobalIsFinite": "error",
+        "noPrototypeBuiltins": "error",
+        "noVar": "error",
+        "noExportsInTest": "off",
+        "useIterableCallbackReturn": "off"
+      },
+      "style": {
+        "useSingleVarDeclarator": "error"
+      }
+    },
+    "includes": ["**/*.js", "!lib/defs.js"]
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  }
+}
