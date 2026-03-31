@@ -68,9 +68,3 @@ Rechnung geladen: { id: '1', supplier_name: 'Muster GmbH', ... }
 **Client (Messaging):**
 Zahlungsauftrag gesendet:
 { invoiceId: '1', supplier: 'Muster GmbH', amount: 199.99, ... }
-
-## Integrationsarchitektur
-Client ──gRPC──> Invoice Service (Port 50051)
-│
-└───RabbitMQ──> Payment Worker
-(Port 5672) (Queue: payment_requests)
