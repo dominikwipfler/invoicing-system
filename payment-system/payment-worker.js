@@ -1,29 +1,79 @@
 const amqp = require('amqplib');
 
+const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
+const QUEUE_NAME = 'payment_requests';
+const INITIAL_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 15000;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatAmount(payment) {
+  const cents = Number(payment.amount_cents);
+  if (!Number.isFinite(cents)) {
+    return 'unbekannt';
+  }
+
+  return `${(cents / 100).toFixed(2)} ${payment.currency || 'EUR'}`;
+}
+
 async function startPaymentWorker() {
-  try {
-    const connection = await amqp.connect('amqp://guest:guest@localhost:5672');
-    const channel = await connection.createChannel();
+  let attempt = 0;
 
-    const queue = 'payment_requests';
-    await channel.assertQueue(queue, { durable: true });
+  while (true) {
+    try {
+      const connection = await amqp.connect(RABBITMQ_URL);
+      const channel = await connection.createChannel();
 
-    console.log('Payment Worker läuft und wartet auf Nachrichten...');
+      attempt = 0;
 
-    channel.consume(queue, (msg) => {
-      if (msg !== null) {
-        const payment = JSON.parse(msg.content.toString());
+      await channel.assertQueue(QUEUE_NAME, { durable: true });
+      await channel.prefetch(1);
 
-        console.log('Zahlungsauftrag empfangen:');
-        console.log(payment);
+      console.log('Payment Worker läuft und wartet auf Nachrichten...');
 
-        console.log(`Zahlung verarbeitet für Rechnung ${payment.invoiceId}`);
+      connection.on('error', (error) => {
+        console.error('RabbitMQ-Verbindungsfehler:', error.message);
+      });
 
-        channel.ack(msg);
-      }
-    });
-  } catch (error) {
-    console.error('Fehler im Payment Worker:', error.message);
+      await new Promise((resolve) => {
+        connection.on('close', () => {
+          console.warn('RabbitMQ-Verbindung geschlossen. Reconnect wird gestartet...');
+          resolve();
+        });
+
+        channel.consume(QUEUE_NAME, (msg) => {
+          if (msg === null) {
+            return;
+          }
+
+          try {
+            const payment = JSON.parse(msg.content.toString());
+
+            console.log('Zahlungsauftrag empfangen:');
+            console.log({
+              ...payment,
+              amount_eur: formatAmount(payment)
+            });
+
+            console.log(`Zahlung verarbeitet für Rechnung ${payment.invoiceId} über ${formatAmount(payment)}`);
+            channel.ack(msg);
+          }
+          catch (parseError) {
+            console.error('Ungültige Zahlungsnachricht:', parseError.message);
+            channel.nack(msg, false, false);
+          }
+        }, { noAck: false });
+      });
+    }
+    catch (error) {
+      attempt += 1;
+      const backoffMs = Math.min(INITIAL_BACKOFF_MS * (2 ** (attempt - 1)), MAX_BACKOFF_MS);
+      console.error(`Fehler im Payment Worker: ${error.message}`);
+      console.warn(`Neuer Verbindungsversuch in ${backoffMs}ms (Versuch ${attempt})...`);
+      await sleep(backoffMs);
+    }
   }
 }
 

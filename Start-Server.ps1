@@ -10,12 +10,10 @@ $runtimeDir = Join-Path $scriptRoot '.runtime'
 $statePath = Join-Path $runtimeDir 'server-state.json'
 
 function Write-Banner {
-  Write-Host ''
-  Write-Host '╔══════════════════════════════════════════════════════════════╗' -ForegroundColor Magenta
-  Write-Host '║                    Invoicing System Start                    ║' -ForegroundColor Magenta
-  Write-Host '╠══════════════════════════════════════════════════════════════╣' -ForegroundColor Magenta
-  Write-Host '║  RabbitMQ + gRPC Service + Payment Worker                   ║' -ForegroundColor Magenta
-  Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor Magenta
+  Write-Box -Lines @(
+    'Invoicing System Start',
+    'RabbitMQ + gRPC Service + Payment Worker'
+  ) -Color Magenta
 }
 
 function Write-Step {
@@ -44,31 +42,97 @@ function Write-Warn {
   Write-Host "  ! $Message" -ForegroundColor DarkYellow
 }
 
+function Get-ConsoleWidth {
+  try {
+    $width = $Host.UI.RawUI.WindowSize.Width
+    if ($width -lt 60) {
+      return 60
+    }
+
+    return $width
+  }
+  catch {
+    return 120
+  }
+}
+
+function Normalize-LineForBox {
+  param(
+    [string]$Line,
+    [int]$MaxInnerWidth
+  )
+
+  if ($null -eq $Line) {
+    return ''
+  }
+
+  $normalized = $Line.Replace("`r", '').Replace("`n", ' ')
+  if ($normalized.Length -le $MaxInnerWidth) {
+    return $normalized
+  }
+
+  if ($MaxInnerWidth -le 3) {
+    return $normalized.Substring(0, $MaxInnerWidth)
+  }
+
+  return $normalized.Substring(0, $MaxInnerWidth - 3) + '...'
+}
+
+function Write-Box {
+  param(
+    [string[]]$Lines,
+    [ConsoleColor]$Color = [ConsoleColor]::White
+  )
+
+  if (-not $Lines -or $Lines.Count -eq 0) {
+    return
+  }
+
+  $maxInnerWidth = (Get-ConsoleWidth) - 4
+  if ($maxInnerWidth -lt 40) {
+    $maxInnerWidth = 40
+  }
+
+  $safeLines = @()
+  foreach ($line in $Lines) {
+    $safeLines += Normalize-LineForBox -Line $line -MaxInnerWidth $maxInnerWidth
+  }
+
+  $innerWidth = ($safeLines | Measure-Object -Property Length -Maximum).Maximum
+  if (-not $innerWidth) {
+    $innerWidth = 1
+  }
+
+  $horizontal = ('═' * ($innerWidth + 2))
+
+  Write-Host ''
+  Write-Host ("╔{0}╗" -f $horizontal) -ForegroundColor $Color
+  foreach ($line in $safeLines) {
+    Write-Host ("║ {0} ║" -f $line.PadRight($innerWidth)) -ForegroundColor $Color
+  }
+  Write-Host ("╚{0}╝" -f $horizontal) -ForegroundColor $Color
+}
+
 function Write-Section {
   param([string]$Title)
   Write-Host ''
   Write-Host $Title -ForegroundColor Cyan
 }
 
-function Write-SummaryLine {
-  param(
-    [string]$Label,
-    [string]$Value,
-    [ConsoleColor]$Color = [ConsoleColor]::White
-  )
-
-  Write-Host ('║  {0,-30} {1,-34}║' -f $Label, $Value) -ForegroundColor $Color
-}
-
 function Write-SummaryBox {
   param([hashtable[]]$Lines)
 
-  Write-Host ''
-  Write-Host '╔══════════════════════════════════════════════════════════════╗' -ForegroundColor Green
-  foreach ($line in $Lines) {
-    Write-SummaryLine -Label $line.Label -Value $line.Value -Color $line.Color
+  $labelWidth = ($Lines | ForEach-Object { [string]$_.Label } | Measure-Object -Property Length -Maximum).Maximum
+  if (-not $labelWidth) {
+    $labelWidth = 1
   }
-  Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor Green
+
+  $summaryLines = @()
+  foreach ($line in $Lines) {
+    $summaryLines += ('{0} : {1}' -f ([string]$line.Label).PadRight($labelWidth), [string]$line.Value)
+  }
+
+  Write-Box -Lines $summaryLines -Color Green
 }
 
 function Save-ServerState {
@@ -253,7 +317,7 @@ else {
 }
 
 Write-SummaryBox -Lines @(
-  @{ Label = 'RabbitMQ'; Value = 'localhost:5672 | http://localhost:15672'; Color = [ConsoleColor]::Green },
+  @{ Label = 'RabbitMQ'; Value = 'localhost:5672 | http://localhost:15672' },
   @{ Label = 'gRPC Service'; Value = 'localhost:50051'; Color = [ConsoleColor]::Green },
   @{ Label = 'Payment Worker'; Value = 'Queue payment_requests'; Color = [ConsoleColor]::Green }
 )

@@ -11,7 +11,7 @@ message Invoice {
   string id = 1;
   string supplier_name = 2;
   string invoice_number = 3;
-  float amount = 4;
+  int64 amount_cents = 4;
   string date = 5;
 }
 

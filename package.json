@@ -7,6 +7,9 @@
     "doc": "docs"
   },
   "scripts": {
+    "check:grpc": "node client/invoice-client.js",
+    "check:messaging": "node client/send-payment.js",
+    "check:integration": "npm run check:grpc && npm run check:messaging",
     "start:servers": "powershell -ExecutionPolicy Bypass -File .\\Start-Server.ps1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

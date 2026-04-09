@@ -15,11 +15,26 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 const invoiceProto = grpc.loadPackageDefinition(packageDefinition).invoice;
 const invoices = {};
 
+function centsToEuro(amountCents) {
+  const cents = Number(amountCents);
+  if (!Number.isFinite(cents)) {
+    return 'unbekannt';
+  }
+
+  return (cents / 100).toFixed(2);
+}
+
 const invoiceServiceImplementation = {
   SaveInvoiceMetadata: (call, callback) => {
     const invoice = call.request;
     invoices[invoice.id] = invoice;
-    console.log('Rechnung gespeichert:', invoice);
+
+    const logInvoice = {
+      ...invoice,
+      amount_eur: centsToEuro(invoice.amount_cents)
+    };
+
+    console.log('Rechnung gespeichert:', logInvoice);
     callback(null, {
       success: true,
       id: invoice.id,
@@ -45,7 +60,16 @@ const invoiceServiceImplementation = {
 const server = new grpc.Server();
 server.addService(invoiceProto.InvoiceService.service, invoiceServiceImplementation);
 
-server.bindAsync('127.0.0.1:50051', grpc.ServerCredentials.createInsecure(), () => {
-  console.log('gRPC Server läuft auf Port 50051');
-  server.start();
+server.bindAsync('127.0.0.1:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+  if (err) {
+    console.error('gRPC Bind-Fehler:', err.message);
+    process.exit(1);
+  }
+
+  if (!port) {
+    console.error('gRPC Bind fehlgeschlagen: kein Port wurde gebunden.');
+    process.exit(1);
+  }
+
+  console.log(`gRPC Server läuft auf Port ${port}`);
 });

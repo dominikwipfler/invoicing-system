@@ -19,11 +19,20 @@ const client = new invoiceProto.InvoiceService(
   grpc.credentials.createInsecure()
 );
 
+function centsToEuro(amountCents) {
+  const cents = Number(amountCents);
+  if (!Number.isFinite(cents)) {
+    return 'unbekannt';
+  }
+
+  return (cents / 100).toFixed(2);
+}
+
 const invoice = {
   id: '1',
   supplier_name: 'Muster GmbH',
   invoice_number: 'RG-1001',
-  amount: 199.99,
+  amount_cents: 19999,
   date: '2026-03-31',
 };
 
@@ -41,6 +50,11 @@ client.SaveInvoiceMetadata(invoice, (err, response) => {
       return;
     }
 
-    console.log('Rechnung geladen:', invoiceResponse);
+    const enrichedResponse = {
+      ...invoiceResponse,
+      amount_eur: centsToEuro(invoiceResponse.amount_cents)
+    };
+
+    console.log('Rechnung geladen:', enrichedResponse);
   });
 });

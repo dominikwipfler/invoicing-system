@@ -29,6 +29,11 @@ npm run start:servers
 
 Das Skript startet RabbitMQ, den gRPC-Service und den Payment Worker und gibt direkt aus, welche Dienste laufen, wie sie erreichbar sind und auf welchen Ports sie lauschen.
 
+Zum Stoppen:
+```powershell
+.\Stop-Server.ps1
+```
+
 ### 1. Message Broker (RabbitMQ)
 ```powershell
 docker start rabbitmq
@@ -59,24 +64,31 @@ node client/invoice-client.js
 node client/send-payment.js
 ```
 
+### 5. Integrationschecks (Happy Path)
+```powershell
+npm run check:grpc
+npm run check:messaging
+npm run check:integration
+```
+
 ## Erwartete Ausgaben
 
 **gRPC Service:**
 
 gRPC Server läuft auf Port 50051
-Rechnung gespeichert: { id: '1', supplier_name: 'Muster GmbH', ... }
+Rechnung gespeichert: { id: '1', supplier_name: 'Muster GmbH', amount_cents: '19999', ... }
 
 **Payment Worker:**
 
 Payment Worker läuft und wartet auf Nachrichten...
 Zahlungsauftrag empfangen:
-{ invoiceId: '1', supplier: 'Muster GmbH', amount: 199.99, ... }
+{ invoiceId: '1', supplier: 'Muster GmbH', amount_cents: 19999, ... }
 Verarbeite Zahlung für Rechnung 1 über 199.99 EUR
 
 **Client (gRPC):**
 Speichern erfolgreich: { success: true, id: '1' }
-Rechnung geladen: { id: '1', supplier_name: 'Muster GmbH', ... }
+Rechnung geladen: { id: '1', supplier_name: 'Muster GmbH', amount_cents: '19999', ... }
 
 **Client (Messaging):**
 Zahlungsauftrag gesendet:
-{ invoiceId: '1', supplier: 'Muster GmbH', amount: 199.99, ... }
+{ invoiceId: '1', supplier: 'Muster GmbH', amount_cents: 19999, ... }

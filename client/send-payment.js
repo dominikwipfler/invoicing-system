@@ -11,9 +11,14 @@ async function sendPayment() {
     const paymentOrder = {
       invoiceId: '1',
       supplier: 'Muster GmbH',
-      amount: 199.99,
+      amount_cents: 19999,
       currency: 'EUR',
       timestamp: new Date().toISOString()
+    };
+
+    const paymentLog = {
+      ...paymentOrder,
+      amount_eur: (paymentOrder.amount_cents / 100).toFixed(2)
     };
 
     channel.sendToQueue(queue, Buffer.from(JSON.stringify(paymentOrder)), {
@@ -21,7 +26,7 @@ async function sendPayment() {
     });
 
     console.log('Zahlungsauftrag gesendet:');
-    console.log(paymentOrder);
+    console.log(paymentLog);
 
     setTimeout(() => {
       connection.close();
