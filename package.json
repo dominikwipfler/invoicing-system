@@ -7,6 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "start:servers": "powershell -ExecutionPolicy Bypass -File .\\Start-Server.ps1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

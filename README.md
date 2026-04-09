@@ -17,6 +17,18 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
 
 ## Startreihenfolge
 
+### Ein-Kommando-Start
+```powershell
+.\Start-Server.ps1
+```
+
+Oder via npm:
+```powershell
+npm run start:servers
+```
+
+Das Skript startet RabbitMQ, den gRPC-Service und den Payment Worker und gibt direkt aus, welche Dienste laufen, wie sie erreichbar sind und auf welchen Ports sie lauschen.
+
 ### 1. Message Broker (RabbitMQ)
 ```powershell
 docker start rabbitmq

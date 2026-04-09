@@ -1,0 +1,25 @@
+{
+  "CreatedAt": "2026-04-09T12:02:32.7506061+02:00",
+  "Services": [
+    {
+      "Name": "RabbitMQ",
+      "Type": "docker",
+      "ContainerName": "rabbitmq",
+      "Status": "gestartet"
+    },
+    {
+      "Name": "gRPC Service",
+      "Type": "node",
+      "ProcessId": 8096,
+      "ScriptPath": "C:\\Uni\\DVG\\Repository\\invoicing-system\\grpc-service\\server.js",
+      "Status": "gestartet"
+    },
+    {
+      "Name": "Payment Worker",
+      "Type": "node",
+      "ProcessId": 17184,
+      "ScriptPath": "C:\\Uni\\DVG\\Repository\\invoicing-system\\payment-system\\payment-worker.js",
+      "Status": "gestartet"
+    }
+  ]
+}
