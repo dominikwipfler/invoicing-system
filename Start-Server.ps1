@@ -150,6 +150,18 @@ function Save-ServerState {
   $state | ConvertTo-Json -Depth 6 | Set-Content -Path $statePath -Encoding UTF8
 }
 
+function Get-NodeProcessByScript {
+  param([string]$RelativePath)
+
+  $normalized = $RelativePath.Replace('/', '\\')
+  $escaped = [regex]::Escape($normalized)
+  $pattern = $escaped.Replace('\\\\', '[\\\\/]')
+
+  return Get-CimInstance Win32_Process | Where-Object {
+    $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match $pattern
+  } | Select-Object -First 1
+}
+
 function Start-RabbitMq {
   if ($SkipRabbitMq) {
     Write-Info 'RabbitMQ wurde übersprungen.'
@@ -212,6 +224,16 @@ function Start-NodeService {
     [string]$Name,
     [string]$RelativePath
   )
+
+  $existing = Get-NodeProcessByScript -RelativePath $RelativePath
+  if ($existing) {
+    Write-Info "$Name läuft bereits (PID $($existing.ProcessId))."
+    return [pscustomobject]@{
+      Name = $Name
+      Status = 'bereits aktiv'
+      ProcessId = [int]$existing.ProcessId
+    }
+  }
 
   Write-Info "$Name wird gestartet..."
   $node = (Get-Command node -ErrorAction Stop).Source
@@ -279,6 +301,13 @@ $runtimeServices += [ordered]@{
   ProcessId = $grpcService.ProcessId
   ScriptPath = (Join-Path $scriptRoot 'grpc-service/server.js')
   Status = $grpcService.Status
+}
+
+if (-not $NoWait) {
+  $grpcStarted = Test-TcpPort -HostName '127.0.0.1' -Port 50051 -TimeoutSeconds 20
+  if (-not $grpcStarted) {
+    throw 'gRPC Service konnte nicht erfolgreich gestartet werden (Port 50051 nicht erreichbar).'
+  }
 }
 
 Write-Step '3/3' 'Payment Worker starten'

@@ -49,8 +49,7 @@ function Stop-NodeProcess {
 
   $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
   if (-not $process) {
-    Write-Warn "$Label ist bereits beendet."
-    return
+    return $false
   }
 
   if ($Force) {
@@ -61,6 +60,52 @@ function Stop-NodeProcess {
     Stop-Process -Id $ProcessId -ErrorAction SilentlyContinue
     Write-Success "$Label wurde beendet."
   }
+
+  return $true
+}
+
+function Stop-NodeByScriptPattern {
+  param(
+    [string]$Pattern,
+    [string]$Label
+  )
+
+  $matches = Get-CimInstance Win32_Process | Where-Object {
+    $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match $Pattern
+  }
+
+  if (-not $matches) {
+    Write-Warn "$Label ist bereits beendet."
+    return
+  }
+
+  foreach ($proc in $matches) {
+    Stop-NodeProcess -ProcessId ([int]$proc.ProcessId) -Label $Label | Out-Null
+  }
+}
+
+function Stop-NodeByListeningPort {
+  param(
+    [int]$Port,
+    [string]$Label
+  )
+
+  $owningPids = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess -Unique
+
+  if (-not $owningPids) {
+    return $false
+  }
+
+  $stoppedAny = $false
+  foreach ($ownerPid in $owningPids) {
+    $stopped = Stop-NodeProcess -ProcessId ([int]$ownerPid) -Label $Label
+    if ($stopped) {
+      $stoppedAny = $true
+    }
+  }
+
+  return $stoppedAny
 }
 
 function Stop-RabbitMq {
@@ -92,18 +137,11 @@ Write-Banner
 if (-not (Test-Path $statePath)) {
   Write-Warn 'Keine Laufzeitdatei gefunden. Versuche, die bekannten Prozesse direkt zu beenden.'
   Write-Step '1/3' 'gRPC Service beenden'
-  Get-CimInstance Win32_Process | Where-Object {
-    $_.Name -eq 'node.exe' -and $_.CommandLine -match 'grpc-service\\server\.js'
-  } | ForEach-Object {
-    Stop-NodeProcess -ProcessId $_.ProcessId -Label 'gRPC Service'
-  }
+  Stop-NodeByScriptPattern -Pattern 'grpc-service[\\/]server\.js' -Label 'gRPC Service'
+  Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
 
   Write-Step '2/3' 'Payment Worker beenden'
-  Get-CimInstance Win32_Process | Where-Object {
-    $_.Name -eq 'node.exe' -and $_.CommandLine -match 'payment-system\\payment-worker\.js'
-  } | ForEach-Object {
-    Stop-NodeProcess -ProcessId $_.ProcessId -Label 'Payment Worker'
-  }
+  Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
 
   Write-Step '3/3' 'RabbitMQ beenden'
   Stop-RabbitMq
@@ -114,19 +152,27 @@ else {
   Write-Step '1/3' 'gRPC Service beenden'
   $grpcService = $state.Services | Where-Object { $_.Name -eq 'gRPC Service' } | Select-Object -First 1
   if ($grpcService) {
-    Stop-NodeProcess -ProcessId [int]$grpcService.ProcessId -Label 'gRPC Service'
+    $stopped = Stop-NodeProcess -ProcessId ([int]$grpcService.ProcessId) -Label 'gRPC Service'
+    if (-not $stopped) {
+      Stop-NodeByScriptPattern -Pattern 'grpc-service[\\/]server\.js' -Label 'gRPC Service'
+      Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
+    }
   }
   else {
-    Write-Warn 'gRPC Service wurde in der Laufzeitdatei nicht gefunden.'
+    Stop-NodeByScriptPattern -Pattern 'grpc-service[\\/]server\.js' -Label 'gRPC Service'
+    Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
   }
 
   Write-Step '2/3' 'Payment Worker beenden'
   $paymentService = $state.Services | Where-Object { $_.Name -eq 'Payment Worker' } | Select-Object -First 1
   if ($paymentService) {
-    Stop-NodeProcess -ProcessId [int]$paymentService.ProcessId -Label 'Payment Worker'
+    $stopped = Stop-NodeProcess -ProcessId ([int]$paymentService.ProcessId) -Label 'Payment Worker'
+    if (-not $stopped) {
+      Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
+    }
   }
   else {
-    Write-Warn 'Payment Worker wurde in der Laufzeitdatei nicht gefunden.'
+    Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
   }
 
   Write-Step '3/3' 'RabbitMQ beenden'

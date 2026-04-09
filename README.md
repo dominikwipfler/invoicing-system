@@ -11,9 +11,16 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
 
 ## Voraussetzungen
 
-- Node.js 22.x LTS
+- Node.js 22.x LTS (oder neuer, z.B. 25.x)
 - Docker Desktop (RabbitMQ)
 - PowerShell / Terminal
+
+## Architektur-Highlights
+
+- **Idempotent Start/Stop**: Start-Server.ps1 erkennt bereits laufende Dienste und startet sie nicht doppelt
+- **Fehlertoleranz**: Payment Worker reconnectet mit exponentiellem Backoff bei RabbitMQ-Ausfällen
+- **Robustes Shutdown**: Stop-Server.ps1 findet und beendet Prozesse auch bei gestörtem State
+- **Zuverlässige Datentypen**: Geldbeträge in Cents (int64) statt Float, keine Rundungsfehler
 
 ## Startreihenfolge
 
@@ -29,10 +36,14 @@ npm run start:servers
 
 Das Skript startet RabbitMQ, den gRPC-Service und den Payment Worker und gibt direkt aus, welche Dienste laufen, wie sie erreichbar sind und auf welchen Ports sie lauschen.
 
+**Hinweis**: Das Skript ist idempotent - mehrfaches Ausführen startet keine doppelten Prozesse.
+
 Zum Stoppen:
 ```powershell
 .\Stop-Server.ps1
 ```
+
+**Hinweis**: Stop beendet Prozesse zuverlässig, auch wenn State-Dateien fehlen oder PIDs veraltet sind.
 
 ### 1. Message Broker (RabbitMQ)
 ```powershell
@@ -81,14 +92,27 @@ Rechnung gespeichert: { id: '1', supplier_name: 'Muster GmbH', amount_cents: '19
 **Payment Worker:**
 
 Payment Worker läuft und wartet auf Nachrichten...
+Fehler im Payment Worker: Socket closed abruptly during opening handshake
+Neuer Verbindungsversuch in 1000ms (Versuch 1)...
+
+(Anfängliche Socket-Fehler sind normal und werden automatisch mit Retry behoben)
+
 Zahlungsauftrag empfangen:
-{ invoiceId: '1', supplier: 'Muster GmbH', amount_cents: 19999, ... }
-Verarbeite Zahlung für Rechnung 1 über 199.99 EUR
+{ invoiceId: '1', supplier: 'Muster GmbH', amount_cents: 19999, amount_eur: '199.99', ... }
+Zahlung verarbeitet für Rechnung 1 über 199.99 EUR
 
 **Client (gRPC):**
 Speichern erfolgreich: { success: true, id: '1' }
-Rechnung geladen: { id: '1', supplier_name: 'Muster GmbH', amount_cents: '19999', ... }
+Rechnung geladen: { id: '1', supplier_name: 'Muster GmbH', amount_cents: '19999', amount_eur: '199.99', ... }
 
 **Client (Messaging):**
 Zahlungsauftrag gesendet:
-{ invoiceId: '1', supplier: 'Muster GmbH', amount_cents: 19999, ... }
+{ invoiceId: '1', supplier: 'Muster GmbH', amount_cents: 19999, amount_eur: '199.99', ... }
+
+## Troubleshooting
+
+| Problem | Lösung |
+|---------|--------|
+| `EADDRINUSE: address already in use 127.0.0.1:50051` | `.\.Stop-Server.ps1` ausführen, dann neu starten |
+| Payment Worker zeigt mehrere Retry-Fehler | Normal beim Boot, RabbitMQ wird sich verbunden |
+| gRPC Parse-Fehler bei alten Clients | `.\.Stop-Server.ps1` ausführen für sauberes Shutdown |

@@ -1,5 +1,5 @@
 {
-  "CreatedAt": "2026-04-09T12:02:32.7506061+02:00",
+  "CreatedAt": "2026-04-09T13:17:02.5976338+02:00",
   "Services": [
     {
       "Name": "RabbitMQ",
@@ -10,14 +10,14 @@
     {
       "Name": "gRPC Service",
       "Type": "node",
-      "ProcessId": 8096,
+      "ProcessId": 23792,
       "ScriptPath": "C:\\Uni\\DVG\\Repository\\invoicing-system\\grpc-service\\server.js",
       "Status": "gestartet"
     },
     {
       "Name": "Payment Worker",
       "Type": "node",
-      "ProcessId": 17184,
+      "ProcessId": 5988,
       "ScriptPath": "C:\\Uni\\DVG\\Repository\\invoicing-system\\payment-system\\payment-worker.js",
       "Status": "gestartet"
     }
