@@ -29,22 +29,26 @@ function centsToEuro(amountCents) {
 }
 
 const invoice = {
-  id: '1',
+  id: '2',
   supplier_name: 'Muster GmbH',
-  invoice_number: 'RG-1001',
-  amount_cents: 19999,
+  invoice_number: 'RG-1002',
+  amount_cents: 29999,
   date: '2026-03-31',
 };
 
 client.SaveInvoiceMetadata(invoice, (err, response) => {
   if (err) {
-    console.error('Fehler beim Speichern:', err.message);
-    return;
+    if (err.code === grpc.status.ALREADY_EXISTS) {
+      console.warn('Rechnung bereits vorhanden:', err.message);
+    } else {
+      console.error('Fehler beim Speichern:', err.message);
+      return;
+    }
+  } else {
+    console.log('Speichern erfolgreich:', response);
   }
 
-  console.log('Speichern erfolgreich:', response);
-
-  client.GetInvoice({ id: '1' }, (err2, invoiceResponse) => {
+  client.GetInvoice({ id: invoice.id }, (err2, invoiceResponse) => {
     if (err2) {
       console.error('Fehler beim Abrufen:', err2.message);
       return;

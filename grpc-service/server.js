@@ -28,6 +28,15 @@ const invoiceServiceImplementation = {
   SaveInvoiceMetadata: (call, callback) => {
     const invoice = call.request;
 
+    // Überprüfung auf Duplikat
+    if (invoices[invoice.id]) {
+      logEvent(invoice.id, 'Duplicate Invoice Attempt', 'grpc-service');
+      return callback({
+        code: grpc.status.ALREADY_EXISTS,
+        message: 'Rechnung bereits gespeichert oder gezahlt.'
+      });
+    }
+
     // Event: Rechnung empfangen
     logEvent(invoice.id, 'Invoice Received', 'grpc-service');
 

@@ -6,6 +6,8 @@ const QUEUE_NAME = 'payment_requests';
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 15000;
 
+const paidInvoices = new Set();
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -49,6 +51,16 @@ async function startPaymentWorker() {
           try {
             const payment = JSON.parse(msg.content.toString());
 
+            // Überprüfung auf Duplikat-Zahlung
+            console.log('Set size before check:', paidInvoices.size);
+            console.log('Checking for duplicate:', payment.invoiceId, paidInvoices.has(payment.invoiceId));
+            if (paidInvoices.has(payment.invoiceId)) {
+              logEvent(payment.invoiceId, 'Duplicate Payment Attempt', 'payment-worker');
+              console.warn(`Duplikat-Zahlung für bereits bezahlte Rechnung ${payment.invoiceId} - Nachricht verworfen`);
+              channel.nack(msg, false, false); // nicht requeue
+              return;
+            }
+
             // Event: Zahlung empfangen
             logEvent(payment.invoiceId, 'Payment Initiated', 'payment-worker');
 
@@ -70,6 +82,10 @@ async function startPaymentWorker() {
 
             // Event: Zahlung erfolgreich
             logEvent(payment.invoiceId, 'Payment Processed', 'payment-worker');
+
+            // Markiere Rechnung als bezahlt
+            paidInvoices.add(payment.invoiceId);
+            console.log('Added to paid:', payment.invoiceId, paidInvoices.size);
 
             channel.ack(msg);
           } catch (parseError) {
