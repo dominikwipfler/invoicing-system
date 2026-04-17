@@ -8,6 +8,7 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
 - **RabbitMQ** (Ports 5672, 15672): Message Broker für asynchronen Nachrichtenaustausch  
 - **Payment Worker**: Zahlungssystem, verarbeitet Zahlungsaufträge aus RabbitMQ-Queue
 - **Client**: Speichert Rechnungsdaten per gRPC und veranlasst Zahlungen per Messaging
+- **Process Mining**: Event-Logging und Analyse für Celonis
 
 ## Voraussetzungen
 
@@ -21,6 +22,7 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
 - **Fehlertoleranz**: Payment Worker reconnectet mit exponentiellem Backoff bei RabbitMQ-Ausfällen
 - **Robustes Shutdown**: Stop-Server.ps1 findet und beendet Prozesse auch bei gestörtem State
 - **Zuverlässige Datentypen**: Geldbeträge in Cents (int64) statt Float, keine Rundungsfehler
+- **Event Logging**: Vollständige Prozess-Tracing für Process Mining Analyse
 
 ## Startreihenfolge
 
@@ -81,6 +83,63 @@ npm run check:grpc
 npm run check:messaging
 npm run check:integration
 ```
+
+## Process Mining mit Celonis
+
+Das System loggt alle Prozess-Events in CSV-Dateien für Process Mining Analyse.
+
+### Event-Log generieren
+```powershell
+# Simuliere realistische Prozesse mit verschiedenen Varianten
+npm run simulate:process
+```
+
+**Erzeugt**: `event-log.csv` mit 50 Rechnungsfällen und 4 Prozess-Varianten
+
+### Event-Logs analysieren
+```powershell
+# Konsolidiere Logs und identifiziere Varianten/Bottlenecks
+npm run analyze:events
+```
+
+**Erzeugt**: `consolidated-event-log.csv` (für Celonis Import)
+
+### Celonis Import und Analyse
+
+1. **Celonis starten**: Öffne Celonis und erstelle ein neues Projekt
+2. **Daten importieren**: 
+   - Gehe zu "Data Integration" → "Data Connections"
+   - Wähle "File Upload" und lade `consolidated-event-log.csv` hoch
+   - Spalten-Mapping:
+     - Case ID: `case_id`
+     - Activity: `activity` 
+     - Timestamp: `timestamp`
+     - Resource: `resource`
+3. **Process Mining Analysis erstellen**:
+   - Gehe zu "Process Analytics" → "New Analysis"
+   - Wähle die importierte Datenquelle
+   - Erstelle Process Explorer
+4. **Varianten identifizieren**:
+   - Im Process Explorer: "Variants" Tab zeigt alle Prozess-Pfade
+   - Happy Path: Invoice Received → Stored → Retrieved → Payment Initiated → Processed
+   - Varianten mit Fehlern: Retry, Duplicate, Not Found
+5. **Bottlenecks analysieren**:
+   - Performance View: Zeigt durchschnittliche Zeiten zwischen Aktivitäten
+   - Engpässe: Lange Wartezeiten zwischen "Retrieved" und "Payment Initiated"
+   - Conformance Check: Abweichungen vom Happy Path identifizieren
+
+### Prozess-Varianten im System
+
+- **Variante A (60%)**: Happy Path - Rechnung erfolgreich verarbeitet
+- **Variante B (20%)**: Payment Retry - Zahlung fehlgeschlagen und wiederholt  
+- **Variante C (10%)**: Duplicate Invoice - Doppelte Rechnung erkannt und abgewiesen
+- **Variante D (10%)**: Invoice Not Found - Rechnung nicht gefunden
+
+### Mögliche Bottlenecks
+
+- Wartezeit zwischen Rechnungsabruf und Zahlungsinitiierung
+- Payment Processing Dauer bei Retry-Fällen
+- Duplicate Detection Overhead
 
 ## Erwartete Ausgaben
 
