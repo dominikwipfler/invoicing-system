@@ -19,6 +19,7 @@ Sprint 1 hat die technische Basis fuer die digitale Rechnungsbearbeitung aufgeba
 Im Kern ging es darum, Rechnungsdaten zu speichern und eine erste asynchrone Zahlungsausloesung moeglich zu machen.
 
 Wichtig fuer die Einordnung:
+
 - Sprint 1 beantwortet die Frage: "Koennen wir Rechnungsdaten robust speichern und einen Zahlungsprozess technisch anstossen?"
 - Noch nicht enthalten sind tiefes Process Mining und eine zentrale Workflow-Orchestrierung (kommt in Sprint 2/3).
 
@@ -31,6 +32,7 @@ Wichtig fuer die Einordnung:
 - Betriebsgrundlage mit Start-/Stop-Skripten vorbereitet.
 
 Ergebnis aus Projektsicht:
+
 - Ein lauffaehiger End-to-End-Mindestpfad von "Rechnung speichern" bis "Zahlung versenden".
 - Klare Trennung von synchroner Fachdatenabfrage (gRPC) und asynchroner Weiterverarbeitung (Queue).
 
@@ -45,6 +47,7 @@ In Sprint 1 besteht die Architektur aus drei Kernteilen:
 3. **RabbitMQ** als asynchroner Kanal fuer Zahlungsauftraege.
 
 Einfache Analogie:
+
 - gRPC-Service = digitales Rechnungskonto.
 - RabbitMQ = Postfach fuer Zahlungsauftraege.
 - Client = Sachbearbeitung, die beides anstoesst.
@@ -70,6 +73,7 @@ Mini-Sequenz (vereinfachte Sicht):
 - **Producer-Queue-Prinzip** fuer asynchrone Auftragsuebergabe.
 
 Warum das sinnvoll ist:
+
 - Der gRPC-Service bleibt klein und schnell, weil er nicht auf Zahlung warten muss.
 - Das Messaging entkoppelt Sender und Empfaenger zeitlich und technisch.
 
@@ -91,6 +95,7 @@ Wenn du die Codebasis jemandem erklaerst, starte mit `proto/invoice.proto` (Vert
   - `client/send-payment.js`
 
 Kurz gesagt:
+
 - Diese Datei ist die "gemeinsame Sprache" zwischen Client und Server.
 
 ### Ordner: `grpc-service/`
@@ -106,6 +111,7 @@ Kurz gesagt:
   - `grpc-service/event-logger.js`
 
 Wichtige fachliche Regeln in dieser Datei:
+
 - Duplikate werden nicht still ueberschrieben.
 - Fehlende Rechnungen werden explizit als Fehler gemeldet.
 
@@ -140,6 +146,7 @@ Wichtige fachliche Regeln in dieser Datei:
   - `client/sent-payments.json`
 
 Warum die Verifikation vor Versand wichtig ist:
+
 - So wird verhindert, dass Zahlungen fuer nicht existierende Rechnungen versendet werden.
 
 ### Root-Dateien
@@ -203,6 +210,7 @@ Beispiel fuer den Dateninhalt eines Zahlungsauftrags:
 - Wurde Zahlung schon gesendet? -> kein erneuter Versand.
 
 Typische Fehlerbilder in Sprint 1:
+
 - gRPC nicht gestartet -> Verbindungsfehler beim Client.
 - RabbitMQ nicht gestartet -> Fehler beim Senden der Queue-Nachricht.
 - Portkonflikte -> Start bricht mit `EADDRINUSE` ab.
@@ -224,6 +232,7 @@ Typische Fehlerbilder in Sprint 1:
 - Node.js fuer schnellen, einfachen Prototyping-Stack.
 
 Pruferfreundliche Begruendung:
+
 - gRPC liefert ein klares API-Contract-First-Vorgehen.
 - Messaging bildet reale Unternehmensprozesse besser ab als reine synchrone Aufrufe.
 
@@ -268,6 +277,7 @@ if (invoices[invoice.id]) {
 ```
 
 Was du dazu sagen kannst:
+
 - "Wir failen frueh und klar, statt inkonsistente Daten zu erzeugen."
 
 ## 8. Schnellstart-Anleitung
@@ -286,13 +296,13 @@ Was du dazu sagen kannst:
 .\Start-Server.ps1
 ```
 
-2. gRPC pruefen:
+1. gRPC pruefen:
 
 ```powershell
 npm run check:grpc
 ```
 
-3. Messaging pruefen:
+1. Messaging pruefen:
 
 ```powershell
 npm run check:messaging
@@ -308,9 +318,9 @@ npm run check:messaging
 Mini-Demo fuer 2 Minuten:
 
 1. `npm run check:grpc`
-2. Kurz zeigen, dass Speichern + Abrufen funktioniert.
-3. `npm run check:messaging`
-4. Zeigen, dass ein Zahlungsauftrag in die Queue geschrieben wird.
+1. Kurz zeigen, dass Speichern + Abrufen funktioniert.
+1. `npm run check:messaging`
+1. Zeigen, dass ein Zahlungsauftrag in die Queue geschrieben wird.
 
 ---
 

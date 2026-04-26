@@ -19,6 +19,7 @@ Sprint 2 hat den Fokus von reiner Verarbeitung auf **Transparenz und Analyse** e
 Die Kernidee: Nicht nur Rechnungen verarbeiten, sondern den Prozess messbar und auswertbar machen.
 
 Wichtig fuer die Abgrenzung:
+
 - Sprint 1: "System laeuft"
 - Sprint 2: "System ist beobachtbar und analysierbar"
 - Sprint 3: "System ist zusaetzlich orchestriert"
@@ -32,6 +33,7 @@ Wichtig fuer die Abgrenzung:
 - Stabilitaet bei Duplikat-/Fehlerfaellen verbessert.
 
 Konkreter Mehrwert:
+
 - Statt Bauchgefuehl gibt es messbare Variantenhaeufigkeiten und Zeitdauern.
 - Engpaesse koennen datenbasiert diskutiert werden (z. B. lange Zeit bis zur Zahlung).
 
@@ -46,6 +48,7 @@ Sprint 2 baut auf Sprint 1 auf und ergaenzt eine Analyse-Schicht:
 3. Ein Analyse-Skript konsolidiert und bewertet die Prozessdaten.
 
 Analogie:
+
 - Sprint 1 war die Fabrik.
 - Sprint 2 hat Sensoren und Auswertungsdashboard angeschlossen.
 
@@ -66,6 +69,7 @@ Technische Kette in einem Satz:
 - **Resilience-Pattern**: Retry/Backoff im Payment Worker.
 
 Warum diese Kombination gut ist:
+
 - Event-Spuren sind leicht zu auditieren.
 - ETL-Logik ist reproduzierbar und tool-unabhaengig.
 - Resilience-Mechanismen machen die Daten realitaetsnah (inkl. Fehlpfade).
@@ -73,6 +77,7 @@ Warum diese Kombination gut ist:
 ## 3. Dateistruktur-Erklaerung
 
 Praktischer Lesepfad fuer Erklaerung im Vortrag:
+
 1. `simulate-process.js` (Welche Faelle entstehen?)
 2. `analyze-events.js` (Wie werden sie ausgewertet?)
 3. `consolidated-event-log.csv` (Was sieht Celonis?)
@@ -89,6 +94,7 @@ Praktischer Lesepfad fuer Erklaerung im Vortrag:
   - schreibt `event-log.csv`
 
 Wichtige fachliche Idee:
+
 - Die Verteilung 60/20/10/10 bildet nicht nur den Happy Path ab, sondern bewusst auch Stoerfaelle.
 
 - **Dateiname/Pfad**: `analyze-events.js`
@@ -105,6 +111,7 @@ Wichtige fachliche Idee:
   - (im aktuellen Stand auch `workflow-engine/event-log.csv`, Sprint-3-Erweiterung)
 
 Was diese Datei besonders macht:
+
 - Sie kann dieselbe Logik auf historische echte Daten oder simulierte Daten anwenden.
 
 - **Dateiname/Pfad**: `consolidated-event-log.csv`
@@ -207,6 +214,7 @@ Invoice Received -> Invoice Stored -> Invoice Retrieved -> Payment Initiated -> 
 - Wird Rechnung nicht gefunden? -> Not-Found-Pfad.
 
 Interpretation fuer die Erklaerung:
+
 - Jeder Entscheidungspunkt erzeugt eine neue Prozessvariante.
 - Viele Varianten sind normal, aber bestimmte Varianten sind teuer (mehr Zeit, mehr Aufwand).
 
@@ -226,6 +234,7 @@ Interpretation fuer die Erklaerung:
 - RabbitMQ + gRPC liefern weiterhin die Datenquelle aus dem operativen Prozess.
 
 Pruferfreundliche Begruendung:
+
 - Wir haben kein separates BI-System gebaut, sondern Analyse direkt aus Betriebsdaten gewonnen.
 - Das ist fuer ein Hochschulprojekt robust und nachvollziehbar.
 
@@ -257,6 +266,7 @@ Sinnvoller Brueckensatz zu Sprint 3:
 - Bottlenecks ergeben sich aus Zeitdifferenzen zwischen aufeinanderfolgenden Events.
 
 Was ein Bottleneck in diesem Projekt bedeutet:
+
 - Nicht nur "CPU langsam", sondern fachlich: ein Vorgang bleibt zu lange zwischen zwei Schritten liegen.
 
 ### Fehlerbehandlung und Logging
@@ -272,6 +282,7 @@ const key = `${prev.activity} -> ${curr.activity}`;
 ```
 
 Was du dazu sagen kannst:
+
 - "Wir haben Dauer nicht geschaetzt, sondern zwischen echten Event-Zeitstempeln berechnet."
 
 ## 8. Schnellstart-Anleitung
@@ -290,19 +301,19 @@ Was du dazu sagen kannst:
 .\Start-Server.ps1
 ```
 
-2. Prozessfaelle simulieren:
+1. Prozessfaelle simulieren:
 
 ```powershell
 npm run simulate:process
 ```
 
-3. Analyse ausfuehren:
+1. Analyse ausfuehren:
 
 ```powershell
 npm run analyze:events
 ```
 
-4. Ergebnis in Celonis importieren:
+1. Ergebnis in Celonis importieren:
 
 - Datei: `consolidated-event-log.csv`
 - Mapping: `case_id`, `activity`, `timestamp`, `resource`
@@ -310,10 +321,10 @@ npm run analyze:events
 Mini-Demo fuer 3 Minuten:
 
 1. `npm run simulate:process`
-2. Kurzer Blick in `event-log.csv` (mehrere Varianten sichtbar).
-3. `npm run analyze:events`
-4. In der Ausgabe die langsamsten Uebergaenge zeigen.
-5. Erkllaeren, warum genau daraus Sprint-3-Anforderungen entstanden sind.
+1. Kurzer Blick in `event-log.csv` (mehrere Varianten sichtbar).
+1. `npm run analyze:events`
+1. In der Ausgabe die langsamsten Uebergaenge zeigen.
+1. Erkllaeren, warum genau daraus Sprint-3-Anforderungen entstanden sind.
 
 ### Wichtige Befehle
 

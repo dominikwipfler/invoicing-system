@@ -14,7 +14,8 @@ Grundlage sind die Sprint-3-Commits:
 In Sprint 3 wurde aus einer reinen technischen Verarbeitung ein **gesteuerter Fachprozess** gemacht.
 Vorher liefen Speichern, Zahlung und Logging eher als lose Kette. Jetzt gibt es eine zentrale Workflow-Engine, die den Ablauf steuert.
 
-Kurz gesagt: 
+Kurz gesagt:
+
 - Der Prozess hat jetzt klare Zustaende.
 - Vor der Zahlung gibt es einen expliziten Freigabeschritt.
 - Das Zahlungssystem sendet Status zurueck.
@@ -34,6 +35,7 @@ Kurz gesagt:
 ### Systemarchitektur (textuell)
 
 Denke an ein Orchester:
+
 - Die **Workflow-Engine** ist der Dirigent.
 - Der **gRPC-Service** ist das Archiv fuer Rechnungsdaten.
 - **RabbitMQ** ist die Poststelle fuer asynchrone Nachrichten.
@@ -367,19 +369,19 @@ if (paymentUpdate.status === 'PAYMENT_FAILED') {
 .\Start-Server.ps1
 ```
 
-2. Workflow-Engine starten:
+1. Workflow-Engine starten:
 
 ```powershell
 npm run start:workflow
 ```
 
-3. Sprint-3-Demo pruefen:
+1. Sprint-3-Demo pruefen:
 
 ```powershell
 npm run check:workflow
 ```
 
-4. Optional Event-Analyse erzeugen:
+1. Optional Event-Analyse erzeugen:
 
 ```powershell
 npm run analyze:events
