@@ -356,3 +356,35 @@ INV-045,Payment Processed,2026-04-26T10:17:40.432Z,payment-worker
 1,Invoice Not Found,2026-04-26T10:44:05.730Z,grpc-service
 2,Duplicate Invoice Attempt,2026-04-26T10:44:09.295Z,grpc-service
 2,Invoice Retrieved,2026-04-26T10:44:09.318Z,grpc-service
+2,Invoice Received,2026-04-26T10:45:36.121Z,grpc-service
+2,Invoice Stored,2026-04-26T10:45:36.123Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:45:36.157Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:45:38.349Z,grpc-service
+2,Payment Initiated,2026-04-26T10:45:38.470Z,payment-worker
+2,Payment Processed,2026-04-26T10:45:38.477Z,payment-worker
+WF-1001,Invoice Received,2026-04-26T10:51:28.347Z,grpc-service
+WF-1001,Invoice Stored,2026-04-26T10:51:28.349Z,grpc-service
+WF-1001,Workflow Started,2026-04-26T10:51:28.364Z,workflow-engine
+WF-1001,Manual Approval Pending,2026-04-26T10:51:28.365Z,workflow-engine
+WF-1001,Invoice Retrieved,2026-04-26T10:51:28.406Z,grpc-service
+WF-1001,Manual Approval Granted,2026-04-26T10:51:28.410Z,workflow-engine
+WF-1001,Payment Request Sent,2026-04-26T10:51:28.411Z,workflow-engine
+WF-1001,Payment Initiated,2026-04-26T10:51:32.578Z,payment-worker
+WF-1001,Payment Processed,2026-04-26T10:51:32.582Z,payment-worker
+WF-1001,Workflow Completed,2026-04-26T10:51:32.597Z,workflow-engine
+2,Invoice Received,2026-04-26T11:36:51.573Z,grpc-service
+2,Invoice Stored,2026-04-26T11:36:51.575Z,grpc-service
+2,Invoice Retrieved,2026-04-26T11:36:51.659Z,grpc-service
+2,Invoice Retrieved,2026-04-26T11:37:06.333Z,grpc-service
+2,Payment Initiated,2026-04-26T11:37:06.431Z,payment-worker
+2,Payment Processed,2026-04-26T11:37:06.436Z,payment-worker
+WF-1001,Invoice Received,2026-04-26T11:37:11.159Z,grpc-service
+WF-1001,Invoice Stored,2026-04-26T11:37:11.161Z,grpc-service
+WF-1001,Workflow Started,2026-04-26T11:37:11.178Z,workflow-engine
+WF-1001,Manual Approval Pending,2026-04-26T11:37:11.179Z,workflow-engine
+WF-1001,Invoice Retrieved,2026-04-26T11:37:11.209Z,grpc-service
+WF-1001,Manual Approval Granted,2026-04-26T11:37:11.217Z,workflow-engine
+WF-1001,Payment Request Sent,2026-04-26T11:37:11.218Z,workflow-engine
+WF-1001,Payment Initiated,2026-04-26T11:37:11.222Z,payment-worker
+WF-1001,Payment Processed,2026-04-26T11:37:11.224Z,payment-worker
+WF-1001,Workflow Completed,2026-04-26T11:37:11.231Z,workflow-engine

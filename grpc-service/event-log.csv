@@ -54,3 +54,13 @@ case_id,activity,timestamp,resource
 2,Invoice Stored,2026-04-26T10:45:36.123Z,grpc-service
 2,Invoice Retrieved,2026-04-26T10:45:36.157Z,grpc-service
 2,Invoice Retrieved,2026-04-26T10:45:38.349Z,grpc-service
+WF-1001,Invoice Received,2026-04-26T10:51:28.347Z,grpc-service
+WF-1001,Invoice Stored,2026-04-26T10:51:28.349Z,grpc-service
+WF-1001,Invoice Retrieved,2026-04-26T10:51:28.406Z,grpc-service
+2,Invoice Received,2026-04-26T11:36:51.573Z,grpc-service
+2,Invoice Stored,2026-04-26T11:36:51.575Z,grpc-service
+2,Invoice Retrieved,2026-04-26T11:36:51.659Z,grpc-service
+2,Invoice Retrieved,2026-04-26T11:37:06.333Z,grpc-service
+WF-1001,Invoice Received,2026-04-26T11:37:11.159Z,grpc-service
+WF-1001,Invoice Stored,2026-04-26T11:37:11.161Z,grpc-service
+WF-1001,Invoice Retrieved,2026-04-26T11:37:11.209Z,grpc-service

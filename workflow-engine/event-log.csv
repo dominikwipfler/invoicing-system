@@ -1,0 +1,11 @@
+case_id,activity,timestamp,resource
+WF-1001,Workflow Started,2026-04-26T10:51:28.364Z,workflow-engine
+WF-1001,Manual Approval Pending,2026-04-26T10:51:28.365Z,workflow-engine
+WF-1001,Manual Approval Granted,2026-04-26T10:51:28.410Z,workflow-engine
+WF-1001,Payment Request Sent,2026-04-26T10:51:28.411Z,workflow-engine
+WF-1001,Workflow Completed,2026-04-26T10:51:32.597Z,workflow-engine
+WF-1001,Workflow Started,2026-04-26T11:37:11.178Z,workflow-engine
+WF-1001,Manual Approval Pending,2026-04-26T11:37:11.179Z,workflow-engine
+WF-1001,Manual Approval Granted,2026-04-26T11:37:11.217Z,workflow-engine
+WF-1001,Payment Request Sent,2026-04-26T11:37:11.218Z,workflow-engine
+WF-1001,Workflow Completed,2026-04-26T11:37:11.231Z,workflow-engine

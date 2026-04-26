@@ -70,17 +70,18 @@ function Stop-NodeByScriptPattern {
     [string]$Label
   )
 
-  $matches = Get-CimInstance Win32_Process | Where-Object {
-    $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match $Pattern
+  $foundProcess = $false
+  Get-CimInstance Win32_Process | Where-Object {
+    $isNodeProcess = ($_.Name -ieq 'node') -or ($_.Name -ieq 'node.exe')
+    $hasScriptPattern = [regex]::IsMatch([string]$_.CommandLine, $Pattern)
+    $isNodeProcess -and $hasScriptPattern
+  } | ForEach-Object {
+    $foundProcess = $true
+    Stop-NodeProcess -ProcessId ([int]$_.ProcessId) -Label $Label | Out-Null
   }
 
-  if (-not $matches) {
+  if (-not $foundProcess) {
     Write-Warn "$Label ist bereits beendet."
-    return
-  }
-
-  foreach ($proc in $matches) {
-    Stop-NodeProcess -ProcessId ([int]$proc.ProcessId) -Label $Label | Out-Null
   }
 }
 
