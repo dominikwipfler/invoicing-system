@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+  id="Definitions_Sprint3"
+  targetNamespace="http://invoicing-system/sprint3">
+
+  <bpmn:process id="InvoiceProcessingToBe" name="Eingangsrechnungsprozess Soll" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_InvoiceReceived" name="Rechnung eingegangen" />
+
+    <bpmn:serviceTask id="Task_SaveMetadata" name="Rechnungsmetadaten speichern (gRPC)" />
+
+    <bpmn:userTask id="Task_ManualApproval" name="Fachliche Pruefung und Freigabe" />
+
+    <bpmn:exclusiveGateway id="Gateway_Approved" name="Freigegeben?" />
+
+    <bpmn:serviceTask id="Task_SendPayment" name="Zahlungsauftrag senden (RabbitMQ)" />
+
+    <bpmn:intermediateCatchEvent id="Event_PaymentResult" name="Zahlungsstatus empfangen">
+      <bpmn:messageEventDefinition />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_PaymentSuccess" name="Zahlung erfolgreich?" />
+
+    <bpmn:serviceTask id="Task_Archive" name="Rechnung archivieren" />
+
+    <bpmn:endEvent id="EndEvent_Success" name="Prozess abgeschlossen" />
+    <bpmn:endEvent id="EndEvent_Rejected" name="Abgelehnt" />
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_InvoiceReceived" targetRef="Task_SaveMetadata" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_SaveMetadata" targetRef="Task_ManualApproval" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_ManualApproval" targetRef="Gateway_Approved" />
+
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Gateway_Approved" targetRef="Task_SendPayment" name="Ja" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Approved" targetRef="EndEvent_Rejected" name="Nein" />
+
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_SendPayment" targetRef="Event_PaymentResult" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Event_PaymentResult" targetRef="Gateway_PaymentSuccess" />
+
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_PaymentSuccess" targetRef="Task_Archive" name="Ja" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Archive" targetRef="EndEvent_Success" />
+
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_PaymentSuccess" targetRef="Task_SendPayment" name="Nein (Retry)" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_InvoiceProcessingToBe">
+    <bpmndi:BPMNPlane id="BPMNPlane_InvoiceProcessingToBe" bpmnElement="InvoiceProcessingToBe">
+      <bpmndi:BPMNShape id="Shape_StartEvent_InvoiceReceived" bpmnElement="StartEvent_InvoiceReceived">
+        <omgdc:Bounds x="120" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Task_SaveMetadata" bpmnElement="Task_SaveMetadata">
+        <omgdc:Bounds x="210" y="138" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Task_ManualApproval" bpmnElement="Task_ManualApproval">
+        <omgdc:Bounds x="430" y="138" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Gateway_Approved" bpmnElement="Gateway_Approved" isMarkerVisible="true">
+        <omgdc:Bounds x="660" y="153" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Task_SendPayment" bpmnElement="Task_SendPayment">
+        <omgdc:Bounds x="770" y="138" width="190" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Event_PaymentResult" bpmnElement="Event_PaymentResult">
+        <omgdc:Bounds x="1020" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Gateway_PaymentSuccess" bpmnElement="Gateway_PaymentSuccess" isMarkerVisible="true">
+        <omgdc:Bounds x="1110" y="153" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_Task_Archive" bpmnElement="Task_Archive">
+        <omgdc:Bounds x="1210" y="138" width="160" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_EndEvent_Success" bpmnElement="EndEvent_Success">
+        <omgdc:Bounds x="1420" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_EndEvent_Rejected" bpmnElement="EndEvent_Rejected">
+        <omgdc:Bounds x="770" y="300" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
+        <omgdi:waypoint x="156" y="178" />
+        <omgdi:waypoint x="210" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_2" bpmnElement="Flow_2">
+        <omgdi:waypoint x="370" y="178" />
+        <omgdi:waypoint x="430" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_3" bpmnElement="Flow_3">
+        <omgdi:waypoint x="600" y="178" />
+        <omgdi:waypoint x="660" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_4" bpmnElement="Flow_4">
+        <omgdi:waypoint x="710" y="178" />
+        <omgdi:waypoint x="770" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_5" bpmnElement="Flow_5">
+        <omgdi:waypoint x="685" y="203" />
+        <omgdi:waypoint x="685" y="318" />
+        <omgdi:waypoint x="770" y="318" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_6" bpmnElement="Flow_6">
+        <omgdi:waypoint x="960" y="178" />
+        <omgdi:waypoint x="1020" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_7" bpmnElement="Flow_7">
+        <omgdi:waypoint x="1056" y="178" />
+        <omgdi:waypoint x="1110" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_8" bpmnElement="Flow_8">
+        <omgdi:waypoint x="1160" y="178" />
+        <omgdi:waypoint x="1210" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_9" bpmnElement="Flow_9">
+        <omgdi:waypoint x="1370" y="178" />
+        <omgdi:waypoint x="1420" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_10" bpmnElement="Flow_10">
+        <omgdi:waypoint x="1135" y="203" />
+        <omgdi:waypoint x="1135" y="360" />
+        <omgdi:waypoint x="865" y="360" />
+        <omgdi:waypoint x="865" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
