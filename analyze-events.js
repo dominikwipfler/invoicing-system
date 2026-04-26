@@ -7,8 +7,8 @@
  * - Berechnet durchschnittliche Zeiten und mögliche Bottlenecks
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 function parseCSV(csvText) {
   const lines = csvText.trim().split('\n');
@@ -26,7 +26,8 @@ function consolidateLogs() {
   const logFiles = [
     path.join(__dirname, 'event-log.csv'),
     path.join(__dirname, 'grpc-service', 'event-log.csv'),
-    path.join(__dirname, 'payment-system', 'event-log.csv')
+    path.join(__dirname, 'payment-system', 'event-log.csv'),
+    path.join(__dirname, 'workflow-engine', 'event-log.csv')
   ];
 
   let allEvents = [];

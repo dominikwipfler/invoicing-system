@@ -10,7 +10,9 @@
     "check:grpc": "node client/invoice-client.js",
     "check:messaging": "node client/send-payment.js",
     "check:integration": "npm run check:grpc && npm run check:messaging",
+    "check:workflow": "node client/workflow-client.js",
     "start:servers": "powershell -ExecutionPolicy Bypass -File .\\Start-Server.ps1",
+    "start:workflow": "node workflow-engine/server.js",
     "simulate:process": "node simulate-process.js",
     "analyze:events": "node analyze-events.js",
     "test": "echo \"Error: no test specified\" && exit 1"

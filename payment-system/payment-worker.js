@@ -3,6 +3,7 @@ const { logEvent } = require('./event-logger');
 
 const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
 const QUEUE_NAME = 'payment_requests';
+const PAYMENT_STATUS_QUEUE = 'payment_status_updates';
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 15000;
 
@@ -31,6 +32,7 @@ async function startPaymentWorker() {
       attempt = 0;
 
       await channel.assertQueue(QUEUE_NAME, { durable: true });
+      await channel.assertQueue(PAYMENT_STATUS_QUEUE, { durable: true });
       await channel.prefetch(1);
 
       console.log('Payment Worker läuft und wartet auf Nachrichten...');
@@ -56,6 +58,11 @@ async function startPaymentWorker() {
             console.log('Checking for duplicate:', payment.invoiceId, paidInvoices.has(payment.invoiceId));
             if (paidInvoices.has(payment.invoiceId)) {
               logEvent(payment.invoiceId, 'Duplicate Payment Attempt', 'payment-worker');
+              channel.sendToQueue(PAYMENT_STATUS_QUEUE, Buffer.from(JSON.stringify({
+                invoiceId: payment.invoiceId,
+                status: 'PAYMENT_DUPLICATE_REJECTED',
+                timestamp: new Date().toISOString()
+              })), { persistent: true });
               console.warn(`Duplikat-Zahlung für bereits bezahlte Rechnung ${payment.invoiceId} - Nachricht verworfen`);
               channel.nack(msg, false, false); // nicht requeue
               return;
@@ -73,6 +80,11 @@ async function startPaymentWorker() {
             // Simuliere gelegentlichen Fehler für Prozess-Varianten (10% Chance)
             if (Math.random() < 0.1) {
               logEvent(payment.invoiceId, 'Payment Failed', 'payment-worker');
+              channel.sendToQueue(PAYMENT_STATUS_QUEUE, Buffer.from(JSON.stringify({
+                invoiceId: payment.invoiceId,
+                status: 'PAYMENT_FAILED',
+                timestamp: new Date().toISOString()
+              })), { persistent: true });
               console.warn(`Zahlung fehlgeschlagen für Rechnung ${payment.invoiceId} - wird wiederholt`);
               channel.nack(msg, false, true); // zurück in die Queue
               return;
@@ -82,6 +94,11 @@ async function startPaymentWorker() {
 
             // Event: Zahlung erfolgreich
             logEvent(payment.invoiceId, 'Payment Processed', 'payment-worker');
+            channel.sendToQueue(PAYMENT_STATUS_QUEUE, Buffer.from(JSON.stringify({
+              invoiceId: payment.invoiceId,
+              status: 'PAYMENT_PROCESSED',
+              timestamp: new Date().toISOString()
+            })), { persistent: true });
 
             // Markiere Rechnung als bezahlt
             paidInvoices.add(payment.invoiceId);
