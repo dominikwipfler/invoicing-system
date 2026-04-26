@@ -29,12 +29,12 @@ function Write-Step {
 
 function Write-Success {
   param([string]$Message)
-  Write-Host "  ✓ $Message" -ForegroundColor Green
+  Write-Host "  [OK] $Message" -ForegroundColor Green
 }
 
 function Write-Info {
   param([string]$Message)
-  Write-Host "  ℹ $Message" -ForegroundColor Yellow
+  Write-Host "  [i] $Message" -ForegroundColor Yellow
 }
 
 function Write-Warn {
@@ -103,14 +103,14 @@ function Write-Box {
     $innerWidth = 1
   }
 
-  $horizontal = ('═' * ($innerWidth + 2))
+  $horizontal = ('=' * ($innerWidth + 2))
 
   Write-Host ''
-  Write-Host ("╔{0}╗" -f $horizontal) -ForegroundColor $Color
+  Write-Host ("+{0}+" -f $horizontal) -ForegroundColor $Color
   foreach ($line in $safeLines) {
-    Write-Host ("║ {0} ║" -f $line.PadRight($innerWidth)) -ForegroundColor $Color
+    Write-Host ("| {0} |" -f $line.PadRight($innerWidth)) -ForegroundColor $Color
   }
-  Write-Host ("╚{0}╝" -f $horizontal) -ForegroundColor $Color
+  Write-Host ("+{0}+" -f $horizontal) -ForegroundColor $Color
 }
 
 function Write-Section {

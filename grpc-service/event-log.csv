@@ -34,3 +34,23 @@ case_id,activity,timestamp,resource
 2,Invoice Retrieved,2026-04-17T07:50:49.060Z,grpc-service
 2,Duplicate Invoice Attempt,2026-04-17T07:50:50.351Z,grpc-service
 2,Invoice Retrieved,2026-04-17T07:50:50.357Z,grpc-service
+2,Invoice Received,2026-04-26T10:40:07.535Z,grpc-service
+2,Invoice Stored,2026-04-26T10:40:07.537Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:40:07.557Z,grpc-service
+2,Duplicate Invoice Attempt,2026-04-26T10:40:08.704Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:40:08.714Z,grpc-service
+2,Invoice Received,2026-04-26T10:43:48.722Z,grpc-service
+2,Invoice Stored,2026-04-26T10:43:48.727Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:43:48.760Z,grpc-service
+2,Duplicate Invoice Attempt,2026-04-26T10:43:53.841Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:43:53.864Z,grpc-service
+2,Duplicate Invoice Attempt,2026-04-26T10:44:00.015Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:44:00.036Z,grpc-service
+1,Invoice Not Found,2026-04-26T10:44:03.866Z,grpc-service
+1,Invoice Not Found,2026-04-26T10:44:05.730Z,grpc-service
+2,Duplicate Invoice Attempt,2026-04-26T10:44:09.295Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:44:09.318Z,grpc-service
+2,Invoice Received,2026-04-26T10:45:36.121Z,grpc-service
+2,Invoice Stored,2026-04-26T10:45:36.123Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:45:36.157Z,grpc-service
+2,Invoice Retrieved,2026-04-26T10:45:38.349Z,grpc-service

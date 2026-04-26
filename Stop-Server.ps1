@@ -10,9 +10,9 @@ $statePath = Join-Path $runtimeDir 'server-state.json'
 
 function Write-Banner {
   Write-Host ''
-  Write-Host '╔══════════════════════════════════════════════════════════════╗' -ForegroundColor DarkCyan
-  Write-Host '║                    Invoicing System Stop                    ║' -ForegroundColor DarkCyan
-  Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor DarkCyan
+  Write-Host '+==============================================================+' -ForegroundColor DarkCyan
+  Write-Host '|                    Invoicing System Stop                    |' -ForegroundColor DarkCyan
+  Write-Host '+==============================================================+' -ForegroundColor DarkCyan
 }
 
 function Write-Step {
@@ -28,12 +28,12 @@ function Write-Step {
 
 function Write-Success {
   param([string]$Message)
-  Write-Host "  ✓ $Message" -ForegroundColor Green
+  Write-Host "  [OK] $Message" -ForegroundColor Green
 }
 
 function Write-Info {
   param([string]$Message)
-  Write-Host "  ℹ $Message" -ForegroundColor Yellow
+  Write-Host "  [i] $Message" -ForegroundColor Yellow
 }
 
 function Write-Warn {
