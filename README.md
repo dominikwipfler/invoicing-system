@@ -1,6 +1,6 @@
-# Rechnungsverarbeitung - Sprint 1 bis Sprint 3
+# Rechnungsverarbeitung - Sprint 1 bis Sprint 4
 
-Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
+Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC, Messaging und BPM.
 
 ## Bausteine
 
@@ -10,12 +10,14 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
 - **Client**: Speichert Rechnungsdaten per gRPC und veranlasst Zahlungen per Messaging
 - **Process Mining**: Event-Logging und Analyse fuer Celonis
 - **Workflow Engine** (Port 3001): Prozessgesteuerte Anwendung fuer Freigabe, Orchestrierung und Statusverfolgung
+- **Camunda 8 BPMN-Prozess**: Digitaler Freigabeprozess mit manuellen und automatischen Schritten
 
 ## Voraussetzungen
 
 - Node.js 22.x LTS (oder neuer, z. B. 25.x)
 - Docker Desktop (RabbitMQ)
 - PowerShell oder Terminal
+- Camunda 8 SaaS Account (fuer Sprint 4)
 
 ## Architektur-Highlights
 
@@ -24,6 +26,7 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC und Messaging.
 - **Robustes Shutdown**: Stop-Skript findet und beendet Prozesse auch bei gestoertem State
 - **Zuverlaessige Datentypen**: Geldbetraege in Cents (`int64`) statt Float
 - **Event Logging**: Vollstaendiges Prozess-Tracing fuer Process Mining
+- **BPMN-Prozessorchestrierung**: Ausfuehrbarer Freigabeprozess in Camunda 8 mit Fehlerbehandlung
 
 ## Startreihenfolge
 
@@ -168,6 +171,55 @@ Neue technische Bausteine:
 
 Der Payment Worker sendet zusaetzlich Status-Events in Queue `payment_status_updates`, damit die Workflow-Engine den Prozesszustand automatisch aktualisiert.
 
+## Sprint 4: Digitaler Freigabeprozess mit Camunda 8
+
+Artefakte unter `sprint4/`:
+
+- `G4_sprint_4.bpmn` - Ausfuehrbarer BPMN-Prozess fuer Camunda 8
+- `forms/rechnungserfassung.form` - Formular zur manuellen Rechnungserfassung
+- `forms/erp-bestaetigung.form` - Formular zur ERP-Bestaetigung
+- `forms/freigabe.form` - Formular fuer Freigabe oder Ablehnung
+
+### Prozessablauf
+
+```
+E-Mail erhalten
+    → [Manuell] Rechnungsdaten im Camunda-Formular erfassen
+    → [Automatisch] Metadaten per gRPC in Sprint-1-Service speichern
+    → [Manuell] Rechnung pruefen und validieren
+    → [Manuell] Rechnungsdaten im ERP System erfassen
+              → https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html
+    → [Manuell] Rechnung freigeben oder ablehnen
+    → [Automatisch] Zahlungsauftrag via RabbitMQ senden
+    → Prozess abgeschlossen
+```
+
+### Deployment in Camunda 8 SaaS
+
+1. Camunda Web Modeler oeffnen
+2. Neues Projekt anlegen und alle 4 Dateien hochladen (`G4_sprint_4.bpmn` + 3 Formulare)
+3. `G4_sprint_4.bpmn` oeffnen → **Deploy & run**
+4. Tasklist oeffnen und Tasks nacheinander bearbeiten
+
+### Tasklist URL
+
+```
+https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
+```
+
+### Fehlerbehandlung
+
+- **gRPC nicht erreichbar**: Boundary Error loest Korrektur-Task aus, Daten koennen angepasst und erneut gesendet werden
+- **RabbitMQ nicht erreichbar**: Boundary Error fuehrt zu End Event "Zahlung fehlgeschlagen"
+- **Rechnung abgelehnt**: Gateway leitet zu End Event "Rechnung abgelehnt"
+
+### Hinweis zu manuellen Schritten
+
+Die Extraktion der Rechnungsdaten und die ERP-Erfassung sind in Sprint 4 bewusst manuell gehalten. Diese Schritte werden in den folgenden Sprints automatisiert:
+
+- **Sprint 5 (RPA)**: Automatische Dateneingabe per UiPath
+- **Sprint 6 (AI Agent)**: KI-gestuetzte Extraktion und Verarbeitung
+
 ## Erwartete Ausgaben
 
 ### gRPC Service
@@ -191,3 +243,5 @@ Der Payment Worker sendet zusaetzlich Status-Events in Queue `payment_status_upd
 - `EADDRINUSE 127.0.0.1:50051`: `.\Stop-Server.ps1` ausfuehren, dann neu starten
 - Mehrere Payment-Retry-Fehler beim Boot: normal waehrend RabbitMQ-Verbindungsaufbau
 - gRPC Parse-Fehler bei alten Clients: `.\Stop-Server.ps1` fuer sauberes Shutdown ausfuehren
+- Camunda Formular erscheint nicht in Tasklist: BPMN und alle 3 Formulare zusammen neu deployen
+- Prozess haengt bei Service Task: In Operate → Modify instance → Move instance zum naechsten Task
