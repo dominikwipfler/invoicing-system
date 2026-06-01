@@ -1,0 +1,39 @@
+{
+  "id": "erp-bestaetigung",
+  "schemaVersion": 12,
+  "exporter": {
+    "name": "Camunda Forms",
+    "version": "0.12.0"
+  },
+  "type": "default",
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_Header",
+      "text": "### Rechnungsdaten im ERP System erfassen\nBitte öffnen Sie das ERP-System und geben Sie die Rechnungsdaten ein:\n\n👉 **[ERP-Rechnungserfassung öffnen](https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html)**\n\nNachdem Sie die Daten erfasst haben, bestätigen Sie dies unten."
+    },
+    {
+      "type": "text",
+      "id": "Text_Hinweis",
+      "text": "**Zu erfassende Felder im ERP:**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Rechnungsnummer: `{{invoiceNumber}}`\n- Betrag: `{{amountEuro}} €`\n- Datum: `{{invoiceDate}}`"
+    },
+    {
+      "type": "textfield",
+      "id": "Field_erpReferenz",
+      "key": "erpReferenzNummer",
+      "label": "ERP-Referenznummer (vom ERP-System vergeben)",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_erpBestaetigung",
+      "key": "erpErfasst",
+      "label": "Ich bestätige, dass die Rechnungsdaten korrekt im ERP System erfasst wurden.",
+      "validate": {
+        "required": true
+      }
+    }
+  ]
+}

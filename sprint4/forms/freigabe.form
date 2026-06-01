@@ -1,0 +1,49 @@
+{
+  "id": "freigabe",
+  "schemaVersion": 12,
+  "exporter": {
+    "name": "Camunda Forms",
+    "version": "0.12.0"
+  },
+  "type": "default",
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_Header",
+      "text": "### Rechnungsfreigabe\nBitte prüfen Sie die erfassten Rechnungsdaten und erteilen Sie die Freigabe oder lehnen Sie die Rechnung ab."
+    },
+    {
+      "type": "text",
+      "id": "Text_Zusammenfassung",
+      "text": "**Rechnungsübersicht**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Rechnungsnummer: `{{invoiceNumber}}`\n- Betrag: `{{amountEuro}} €`\n- Datum: `{{invoiceDate}}`\n- ERP-Referenz: `{{erpReferenzNummer}}`"
+    },
+    {
+      "type": "radio",
+      "id": "Field_freigabeEntscheidung",
+      "key": "freigabeEntscheidung",
+      "label": "Entscheidung",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "Freigabe erteilen — Zahlung veranlassen", "value": "genehmigt" },
+        { "label": "Rechnung ablehnen — Prozess beenden",     "value": "abgelehnt" }
+      ]
+    },
+    {
+      "type": "textfield",
+      "id": "Field_freigebenderName",
+      "key": "freigebenderName",
+      "label": "Ihr Name (Freigebende Person)",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "Field_freigabeKommentar",
+      "key": "freigabeKommentar",
+      "label": "Begründung / Kommentar (Pflicht bei Ablehnung)"
+    }
+  ]
+}

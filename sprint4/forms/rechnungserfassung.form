@@ -1,0 +1,91 @@
+{
+  "id": "rechnungserfassung",
+  "schemaVersion": 12,
+  "exporter": {
+    "name": "Camunda Forms",
+    "version": "0.12.0"
+  },
+  "type": "default",
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_Header",
+      "text": "### Rechnungsdaten erfassen\nBitte extrahieren Sie die folgenden Daten aus der eingegangenen E-Mail und füllen Sie das Formular aus."
+    },
+    {
+      "type": "textfield",
+      "id": "Field_invoiceId",
+      "key": "invoiceId",
+      "label": "Rechnungs-ID (eindeutig)",
+      "validate": {
+        "required": true,
+        "minLength": 1,
+        "maxLength": 50
+      }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_supplierName",
+      "key": "supplierName",
+      "label": "Lieferant / Rechnungssteller",
+      "validate": {
+        "required": true,
+        "minLength": 2
+      }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_invoiceNumber",
+      "key": "invoiceNumber",
+      "label": "Rechnungsnummer",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "number",
+      "id": "Field_amountEuro",
+      "key": "amountEuro",
+      "label": "Rechnungsbetrag (€)",
+      "validate": {
+        "required": true,
+        "min": 0.01
+      },
+      "decimalDigits": 2,
+      "increment": "0.01",
+      "serializeToString": false
+    },
+    {
+      "type": "datetime",
+      "id": "Field_invoiceDate",
+      "key": "invoiceDate",
+      "label": "Rechnungsdatum",
+      "subtype": "date",
+      "dateLabel": "Datum wählen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "select",
+      "id": "Field_eingangskanal",
+      "key": "eingangskanal",
+      "label": "Eingangskanal",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        { "label": "E-Mail", "value": "email" },
+        { "label": "Post / Brief", "value": "post" },
+        { "label": "EDI (automatisch)", "value": "edi" },
+        { "label": "Sonstige", "value": "sonstige" }
+      ]
+    },
+    {
+      "type": "textarea",
+      "id": "Field_notizen",
+      "key": "notizen",
+      "label": "Bemerkungen (optional)"
+    }
+  ]
+}
