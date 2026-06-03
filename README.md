@@ -1,247 +1,223 @@
 # Rechnungsverarbeitung - Sprint 1 bis Sprint 4
 
-Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC, Messaging und BPM.
+Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC, Messaging (RabbitMQ) und Camunda 8 BPM.
 
-## Bausteine
+---
 
-- **gRPC Service** (Port 50051): Speichert Rechnungsmetadaten
-- **RabbitMQ** (Ports 5672, 15672): Message Broker fuer asynchronen Nachrichtenaustausch
-- **Payment Worker**: Zahlungssystem, verarbeitet Zahlungsauftraege aus RabbitMQ-Queue
-- **Client**: Speichert Rechnungsdaten per gRPC und veranlasst Zahlungen per Messaging
-- **Process Mining**: Event-Logging und Analyse fuer Celonis
-- **Workflow Engine** (Port 3001): Prozessgesteuerte Anwendung fuer Freigabe, Orchestrierung und Statusverfolgung
-- **Camunda 8 BPMN-Prozess**: Digitaler Freigabeprozess mit manuellen und automatischen Schritten
+## Systembausteine
+
+| Baustein | Port | Beschreibung |
+|---|---|---|
+| **gRPC Service** | 50051 | Speichert Rechnungsmetadaten |
+| **RabbitMQ** | 5672 / 15672 | Message Broker fuer Zahlungsauftraege |
+| **Payment Worker** | — | Verarbeitet Zahlungsauftraege aus RabbitMQ |
+| **Camunda Worker** | — | Automatisiert Service Tasks im BPMN-Prozess |
+| **Workflow Engine** | 3001 | Sprint-3-Eigenimplementierung (ersetzt durch Camunda ab Sprint 4) |
+
+---
 
 ## Voraussetzungen
 
-- Node.js 22.x LTS (oder neuer, z. B. 25.x)
-- Docker Desktop (RabbitMQ)
-- PowerShell oder Terminal
-- Camunda 8 SaaS Account (fuer Sprint 4)
+- Node.js 22.x LTS oder neuer
+- Docker Desktop (fuer RabbitMQ)
+- Camunda 8 SaaS Account
+- `.env`-Datei im Projektordner (siehe `.env.example`)
 
-## Architektur-Highlights
+---
 
-- **Idempotent Start/Stop**: Start-Skript startet Dienste nicht doppelt
-- **Fehlertoleranz**: Payment Worker reconnectet mit exponentiellem Backoff bei RabbitMQ-Ausfaellen
-- **Robustes Shutdown**: Stop-Skript findet und beendet Prozesse auch bei gestoertem State
-- **Zuverlaessige Datentypen**: Geldbetraege in Cents (`int64`) statt Float
-- **Event Logging**: Vollstaendiges Prozess-Tracing fuer Process Mining
-- **BPMN-Prozessorchestrierung**: Ausfuehrbarer Freigabeprozess in Camunda 8 mit Fehlerbehandlung
+## Sprint 4: Camunda Workflow starten
 
-## Startreihenfolge
-
-### Ein-Kommando-Start
-
-```powershell
-.\Start-Server.ps1
-```
-
-Oder via npm:
+### Schritt 1 — Infrastruktur starten
 
 ```powershell
 npm run start:servers
 ```
 
-Das Skript startet RabbitMQ, den gRPC-Service und den Payment Worker und zeigt Erreichbarkeit und Ports an.
+Startet automatisch: RabbitMQ (Docker) + gRPC Service (Port 50051) + Payment Worker.
+Warten bis `Start abgeschlossen.` erscheint.
 
-Zum Stoppen:
-
-```powershell
-.\Stop-Server.ps1
-```
-
-### 1. Message Broker (RabbitMQ)
+### Schritt 2 — Camunda Worker starten (separates Terminal)
 
 ```powershell
-docker start rabbitmq
-# oder falls noch nicht vorhanden:
-# docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+npm run start:camunda-worker
 ```
 
-Pruefen: [http://localhost:15672](http://localhost:15672) (`guest/guest`)
+Der Worker verbindet sich mit Camunda SaaS und abonniert folgende Tasks:
+- `receive-invoice` — Rechnung empfangen, invoiceId generieren
+- `grpc-save-invoice` — Metadaten per gRPC speichern
+- `rabbitmq-payment` — Zahlungsauftrag an RabbitMQ senden
+- `archive-invoice` — Rechnung archivieren und loggen
 
-### 2. gRPC Service starten
+### Schritt 3 — Prozess per E-Mail triggern (separates Terminal)
 
 ```powershell
-node grpc-service/server.js
+npm run trigger:email
+# Optional mit eigenen Daten:
+node sprint4/trigger-from-email.js "lieferant@beispiel.de" "Rechnung April 2026"
 ```
 
-Port: `50051`
+Startet eine neue Prozessinstanz in Camunda. Danach erscheint automatisch die erste Aufgabe im Tasklist.
 
-### 3. Payment Worker starten
+### Schritt 4 — Prozess im Browser bearbeiten
+
+| Tool | URL |
+|---|---|
+| **Tasklist** (User Tasks ausfuellen) | https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
+| **Operate** (Prozess live verfolgen) | https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
+
+### Schritt 5 — Stoppen
 
 ```powershell
-node payment-system/payment-worker.js
+npm run stop:servers
+# Camunda Worker: Strg+C im entsprechenden Terminal
 ```
 
-Der Worker wartet auf Nachrichten in Queue `payment_requests`.
+---
 
-### 4. Tests ausfuehren
+## Vollstaendiger Prozessablauf
+
+```
+[Terminal 3] npm run trigger:email
+        │
+        │  Camunda SaaS startet Prozessinstanz (Process_11wgywq)
+        ▼
+[AUTOMATISCH] receive-invoice
+        Generiert invoiceId = INV-<timestamp>
+        Speichert emailFrom, emailSubject, receivedAt
+        │
+        ▼
+[MANUELL im Tasklist] Rechnungsdaten erfassen
+        Formular: rechnungserfassung.form
+        Felder: Lieferant, Rechnungsnummer, Betrag (EUR), Datum, Eingangskanal
+        │
+        ▼
+[AUTOMATISCH] grpc-save-invoice
+        Ruft gRPC Service (Port 50051) auf
+        Speichert Rechnungsmetadaten
+        Setzt dataComplete = true/false
+        Bei Fehler → Boundary Event → Korrektur-Task fuer Sachbearbeiter
+        │
+        ├─ dataComplete = false → [MANUELL] Fehlende Daten ergaenzen → zurueck
+        ▼ dataComplete = true
+[MANUELL im Tasklist] Rechnung pruefen und validieren
+        Formular: freigabe.form
+        Entscheidung: complianceNeeded? infoNeeded?
+        │
+        ├─ complianceNeeded = true → [MANUELL] Compliance Check (Finanzabteilung)
+        ├─ infoNeeded = true → [MANUELL] Info beim Lieferanten anfragen → erhalten
+        ▼ (Normalfall)
+[MANUELL im Tasklist] Rechnung freigeben (Manager)
+        Formular: freigabe.form
+        │
+        ▼
+[MANUELL im Tasklist] Rechnungsdaten ins ERP System eingeben
+        Formular: erp-bestaetigung.form
+        Link zur ERP-Simulation: https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html
+        ERP-Referenznummer zurueck ins Formular eintragen
+        │
+        ▼
+[AUTOMATISCH] rabbitmq-payment
+        Sendet Zahlungsauftrag an RabbitMQ Queue payment_requests
+        Payment Worker verarbeitet die Zahlung
+        Bei Fehler → Boundary Event → End: "Zahlung fehlgeschlagen"
+        │
+        ▼
+[AUTOMATISCH] archive-invoice
+        Schreibt Eintrag in event-log.csv
+        │
+        ▼
+        END: "Rechnung verarbeitet"
+```
+
+---
+
+## npm Scripts Uebersicht
+
+| Befehl | Beschreibung |
+|---|---|
+| `npm run start:servers` | RabbitMQ + gRPC + Payment Worker starten |
+| `npm run stop:servers` | Alle lokalen Server stoppen |
+| `npm run start:camunda-worker` | Camunda External Task Worker starten |
+| `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten |
+| `npm run start:workflow` | Sprint-3 Workflow Engine starten (Port 3001) |
+| `npm run check:grpc` | gRPC Verbindung testen |
+| `npm run check:messaging` | RabbitMQ Verbindung testen |
+| `npm run check:integration` | Beide Checks ausfuehren |
+| `npm run simulate:process` | Event-Daten fuer Process Mining generieren |
+| `npm run analyze:events` | Event-Logs konsolidieren (Celonis-Import) |
+
+---
+
+## Projektstruktur
+
+```
+invoicing-system/
+├── grpc-service/           # Sprint 1: gRPC Server (Port 50051)
+├── payment-system/         # Sprint 1: RabbitMQ Payment Worker
+├── client/                 # Sprint 1: Integrations-Clients
+├── workflow-engine/        # Sprint 3: Eigene Workflow Engine (Port 3001)
+├── sprint4/
+│   ├── G4_sprint_4.bpmn            # Ausfuehrbarer BPMN-Prozess (Camunda 8)
+│   ├── camunda-worker.js           # External Task Worker (4 Service Tasks)
+│   ├── trigger-from-email.js       # Prozess per E-Mail starten
+│   └── forms/
+│       ├── rechnungserfassung.form # Manuelle Rechnungserfassung
+│       ├── freigabe.form           # Pruefen / Freigeben
+│       └── erp-bestaetigung.form   # ERP-Erfassung bestaetigen
+├── docs/
+│   ├── sprint2/            # Process Mining Dokumentation
+│   └── sprint3/            # Soll-Prozess, Zielarchitektur, Optimierungen
+├── proto/invoice.proto     # gRPC Schnittstellendefinition
+├── Start-Server.ps1        # Infrastruktur starten
+├── Stop-Server.ps1         # Infrastruktur stoppen
+└── .env                    # Camunda SaaS + lokale Verbindungsdaten (nicht in Git)
+```
+
+---
+
+## Fehlerbehandlung im Prozess
+
+| Fehlerfall | Verhalten |
+|---|---|
+| gRPC nicht erreichbar | Boundary Error → Korrektur-Task fuer Sachbearbeiter → Retry |
+| RabbitMQ nicht erreichbar | Boundary Error → End Event "Zahlung fehlgeschlagen" |
+| Camunda Worker 504 | SDK wiederholt automatisch bis Cluster aufgewacht ist |
+
+---
+
+## Process Mining (Sprint 2)
 
 ```powershell
-# Test 1: Rechnungsmetadaten speichern/abrufen
-node client/invoice-client.js
-
-# Test 2: Zahlungsauftrag senden
-node client/send-payment.js
+npm run simulate:process   # 50 Rechnungsfaelle + 4 Varianten generieren
+npm run analyze:events     # consolidated-event-log.csv erstellen
 ```
 
-### 5. Integrationschecks (Happy Path)
+Celonis Import: `consolidated-event-log.csv` → Spalten: `case_id`, `activity`, `timestamp`, `resource`
 
-```powershell
-npm run check:grpc
-npm run check:messaging
-npm run check:integration
-```
+Prozess-Varianten:
+- **A (60%)**: Happy Path — Rechnung erfolgreich verarbeitet
+- **B (20%)**: Payment Retry — Zahlung wiederholt
+- **C (10%)**: Duplicate Invoice — Duplikat abgewiesen
+- **D (10%)**: Invoice Not Found — Rechnung nicht gefunden
 
-### 6. Workflow Engine starten (Sprint 3)
+---
 
-```powershell
-npm run start:workflow
-```
+## Hinweis zu manuellen Schritten (Sprint 4)
 
-In einer zweiten Konsole:
+Die Rechnungserfassung und ERP-Eingabe sind in Sprint 4 bewusst manuell:
 
-```powershell
-npm run check:workflow
-```
+- **Sprint 5 (RPA)**: Bot automatisiert die ERP-Dateneingabe
+- **Sprint 6 (AI Agent)**: KI extrahiert Rechnungsdaten aus PDF und befuellt das Formular vor
 
-Workflow-Endpunkte:
-
-- `POST /workflows/start`
-- `POST /workflows/:workflowId/approve`
-- `GET /workflows/:workflowId`
-- `GET /workflows`
-
-## Process Mining mit Celonis
-
-### Event-Log generieren
-
-```powershell
-npm run simulate:process
-```
-
-Erzeugt: `event-log.csv` mit 50 Rechnungsfaellen und 4 Prozessvarianten.
-
-### Event-Logs analysieren
-
-```powershell
-npm run analyze:events
-```
-
-Erzeugt: `consolidated-event-log.csv` fuer den Celonis-Import.
-
-### Celonis Import und Analyse
-
-1. Celonis-Projekt erstellen.
-1. Datei `consolidated-event-log.csv` hochladen.
-1. Spalten mappen:
-   - Case ID: `case_id`
-   - Activity: `activity`
-   - Timestamp: `timestamp`
-   - Resource: `resource`
-1. Process Explorer erstellen und Varianten/Bottlenecks analysieren.
-
-### Prozess-Varianten im System
-
-- **Variante A (60%)**: Happy Path - Rechnung erfolgreich verarbeitet
-- **Variante B (20%)**: Payment Retry - Zahlung fehlgeschlagen und wiederholt
-- **Variante C (10%)**: Duplicate Invoice - Doppelte Rechnung erkannt und abgewiesen
-- **Variante D (10%)**: Invoice Not Found - Rechnung nicht gefunden
-
-### Moegliche Bottlenecks
-
-- Wartezeit zwischen Rechnungsabruf und Zahlungsinitiierung
-- Payment-Processing-Dauer bei Retry-Faellen
-- Duplicate-Detection-Overhead
-
-## Sprint 3: Soll-Prozess und Zielarchitektur
-
-Artefakte unter `docs/sprint3/`:
-
-- `optimierungspotenziale.md`
-- `sollprozess.bpmn`
-- `zielarchitektur.md`
-
-Neue technische Bausteine:
-
-- `workflow-engine/server.js`
-- `workflow-engine/event-logger.js`
-- `client/workflow-client.js`
-
-Der Payment Worker sendet zusaetzlich Status-Events in Queue `payment_status_updates`, damit die Workflow-Engine den Prozesszustand automatisch aktualisiert.
-
-## Sprint 4: Digitaler Freigabeprozess mit Camunda 8
-
-Artefakte unter `sprint4/`:
-
-- `G4_sprint_4.bpmn` - Ausfuehrbarer BPMN-Prozess fuer Camunda 8
-- `forms/rechnungserfassung.form` - Formular zur manuellen Rechnungserfassung
-- `forms/erp-bestaetigung.form` - Formular zur ERP-Bestaetigung
-- `forms/freigabe.form` - Formular fuer Freigabe oder Ablehnung
-
-### Prozessablauf
-
-```
-E-Mail erhalten
-    → [Manuell] Rechnungsdaten im Camunda-Formular erfassen
-    → [Automatisch] Metadaten per gRPC in Sprint-1-Service speichern
-    → [Manuell] Rechnung pruefen und validieren
-    → [Manuell] Rechnungsdaten im ERP System erfassen
-              → https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html
-    → [Manuell] Rechnung freigeben oder ablehnen
-    → [Automatisch] Zahlungsauftrag via RabbitMQ senden
-    → Prozess abgeschlossen
-```
-
-### Deployment in Camunda 8 SaaS
-
-1. Camunda Web Modeler oeffnen
-2. Neues Projekt anlegen und alle 4 Dateien hochladen (`G4_sprint_4.bpmn` + 3 Formulare)
-3. `G4_sprint_4.bpmn` oeffnen → **Deploy & run**
-4. Tasklist oeffnen und Tasks nacheinander bearbeiten
-
-### Tasklist URL
-
-```
-https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
-```
-
-### Fehlerbehandlung
-
-- **gRPC nicht erreichbar**: Boundary Error loest Korrektur-Task aus, Daten koennen angepasst und erneut gesendet werden
-- **RabbitMQ nicht erreichbar**: Boundary Error fuehrt zu End Event "Zahlung fehlgeschlagen"
-- **Rechnung abgelehnt**: Gateway leitet zu End Event "Rechnung abgelehnt"
-
-### Hinweis zu manuellen Schritten
-
-Die Extraktion der Rechnungsdaten und die ERP-Erfassung sind in Sprint 4 bewusst manuell gehalten. Diese Schritte werden in den folgenden Sprints automatisiert:
-
-- **Sprint 5 (RPA)**: Automatische Dateneingabe per UiPath
-- **Sprint 6 (AI Agent)**: KI-gestuetzte Extraktion und Verarbeitung
-
-## Erwartete Ausgaben
-
-### gRPC Service
-
-- `gRPC Server laeuft auf Port 50051`
-- `Rechnung gespeichert: ...`
-
-### Payment Worker
-
-- `Payment Worker laeuft und wartet auf Nachrichten...`
-- Initiale Handshake-Fehler koennen beim Start auftreten und werden durch Retry abgefangen.
-- `Zahlung verarbeitet fuer Rechnung ...`
-
-### Client
-
-- gRPC: `Speichern erfolgreich`, `Rechnung geladen`
-- Messaging: `Zahlungsauftrag gesendet`
+---
 
 ## Troubleshooting
 
-- `EADDRINUSE 127.0.0.1:50051`: `.\Stop-Server.ps1` ausfuehren, dann neu starten
-- Mehrere Payment-Retry-Fehler beim Boot: normal waehrend RabbitMQ-Verbindungsaufbau
-- gRPC Parse-Fehler bei alten Clients: `.\Stop-Server.ps1` fuer sauberes Shutdown ausfuehren
-- Camunda Formular erscheint nicht in Tasklist: BPMN und alle 3 Formulare zusammen neu deployen
-- Prozess haengt bei Service Task: In Operate → Modify instance → Move instance zum naechsten Task
+| Problem | Loesung |
+|---|---|
+| `ECONNREFUSED 50051` | `npm run start:servers` ausfuehren |
+| `ECONNREFUSED 5672` | Docker Desktop starten, dann `npm run start:servers` |
+| Camunda 504 | Operate im Browser oeffnen (Cluster aufwecken), dann erneut versuchen |
+| Worker 401 Unauthorized | `.env` pruefen: `ZEEBE_CLIENT_ID` und `ZEEBE_CLIENT_SECRET` korrekt? |
+| Task haengt in Operate | Operate → Instanz anklicken → Modify → Token verschieben |
+| Formular fehlt im Tasklist | BPMN + alle 3 Formulare zusammen neu in Camunda deployen |
