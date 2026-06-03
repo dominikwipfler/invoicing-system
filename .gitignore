@@ -129,3 +129,7 @@ temp/
 
 # Runtime data for this project
 .runtime/
+
+# RPA Screenshots und Videos (Audit-Trail lokal)
+sprint5/screenshots/*.png
+sprint5/screenshots/*.webm

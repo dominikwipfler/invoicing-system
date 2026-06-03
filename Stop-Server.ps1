@@ -138,6 +138,7 @@ Write-Banner
 
 if (-not (Test-Path $statePath)) {
   Write-Warn 'Keine Laufzeitdatei gefunden. Versuche, die bekannten Prozesse direkt zu beenden.'
+
   Write-Step '1/4' 'gRPC Service beenden'
   Stop-NodeByScriptPattern -Pattern 'grpc-service[\\/]server\.js' -Label 'gRPC Service'
   Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
@@ -181,16 +182,7 @@ else {
   }
 
   Write-Step '3/4' 'Camunda Worker beenden'
-  $camundaService = $state.Services | Where-Object { $_.Name -eq 'Camunda Worker' } | Select-Object -First 1
-  if ($camundaService) {
-    $stopped = Stop-NodeProcess -ProcessId ([int]$camundaService.ProcessId) -Label 'Camunda Worker'
-    if (-not $stopped) {
-      Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
-    }
-  }
-  else {
-    Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
-  }
+  Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
 
   Write-Step '4/4' 'RabbitMQ beenden'
   Stop-RabbitMq
