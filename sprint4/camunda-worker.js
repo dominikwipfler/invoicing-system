@@ -5,7 +5,15 @@ const protoLoader = require('@grpc/proto-loader');
 const amqp = require('amqplib');
 const fs = require('fs');
 const path = require('path');
-const { fillErpForm } = require('../sprint5/rpa-erp-bot');
+
+// RPA-Modul optional laden (nur wenn Playwright installiert ist)
+let fillErpForm = null;
+try {
+  fillErpForm = require('../sprint5/rpa-erp-bot').fillErpForm;
+  console.log('[INFO] RPA-Modul (Playwright) verfügbar – automatische ERP-Eingabe aktiviert');
+} catch (err) {
+  console.log('[INFO] RPA-Modul nicht verfügbar – ERP-Eingabe manuell im Tasklist');
+}
 
 // ── Konfiguration ─────────────────────────────────────────────────────────────
 const GRPC_ADDRESS  = process.env.GRPC_ADDRESS  || '127.0.0.1:50051';
@@ -157,28 +165,32 @@ zbc.createWorker({
   },
 });
 
-// 5. ERP-Erfassung per RPA (Sprint 5)
-zbc.createWorker({
-  taskType: 'rpa-erp-entry',
-  taskHandler: async (job) => {
-    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate } = job.variables;
-    console.log(`[rpa-erp-entry] Starte RPA-Bot für Rechnung ${invoiceId}`);
-    logEvent(invoiceId, 'RPA ERP Entry Started', 'camunda-worker');
+// 5. ERP-Erfassung per RPA (Sprint 5) — nur wenn Playwright verfügbar ist
+if (fillErpForm) {
+  zbc.createWorker({
+    taskType: 'rpa-erp-entry',
+    taskHandler: async (job) => {
+      const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate } = job.variables;
+      console.log(`[rpa-erp-entry] Starte RPA-Bot für Rechnung ${invoiceId}`);
+      logEvent(invoiceId, 'RPA ERP Entry Started', 'camunda-worker');
 
-    try {
-      const result = await fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate });
-      console.log(`[rpa-erp-entry] Abgeschlossen: ${result.erpReferenzNummer}`);
-      logEvent(invoiceId, 'RPA ERP Entry Completed', 'camunda-worker');
-      return job.complete({
-        erpReferenzNummer: result.erpReferenzNummer,
-        erpErfasst: true,
-      });
-    } catch (err) {
-      console.error(`[rpa-erp-entry] Fehler: ${err.message}`);
-      logEvent(invoiceId, 'RPA ERP Entry Failed', 'camunda-worker');
-      return job.fail(err.message, { retries: 2, retryBackOff: 5000 });
-    }
-  },
-});
+      try {
+        const result = await fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate });
+        console.log(`[rpa-erp-entry] Abgeschlossen: ${result.erpReferenzNummer}`);
+        logEvent(invoiceId, 'RPA ERP Entry Completed', 'camunda-worker');
+        return job.complete({
+          erpReferenzNummer: result.erpReferenzNummer,
+          erpErfasst: true,
+        });
+      } catch (err) {
+        console.error(`[rpa-erp-entry] Fehler: ${err.message}`);
+        logEvent(invoiceId, 'RPA ERP Entry Failed', 'camunda-worker');
+        return job.fail(err.message, { retries: 2, retryBackOff: 5000 });
+      }
+    },
+  });
+}
 
-console.log('Camunda Worker läuft – abonnierte Tasks: receive-invoice, grpc-save-invoice, rabbitmq-payment, archive-invoice, rpa-erp-entry');
+const subscribedTasks = ['receive-invoice', 'grpc-save-invoice', 'rabbitmq-payment', 'archive-invoice'];
+if (fillErpForm) subscribedTasks.push('rpa-erp-entry');
+console.log(`Camunda Worker läuft – abonnierte Tasks: ${subscribedTasks.join(', ')}`);
