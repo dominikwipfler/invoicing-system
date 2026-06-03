@@ -1,144 +1,113 @@
-# Rechnungsverarbeitung - Sprint 1 bis Sprint 5
+# Eingangsrechnungsverarbeitung — Sprint 1 bis 5
 
-Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC, Messaging (RabbitMQ) und Camunda 8 BPM.
+Digitalisierung eines Eingangsrechnungsprozesses mit gRPC, RabbitMQ, Camunda 8 BPM und RPA.
+Hochschule Karlruhe — Projekt Digitalisierung von Geschaeftsprozessen (SS 2026)
 
 ---
 
-## Systembausteine
+## Schnellstart
 
-| Baustein | Port | Beschreibung |
-|---|---|---|
-| **gRPC Service** | 50051 | Speichert Rechnungsmetadaten |
-| **RabbitMQ** | 5672 / 15672 | Message Broker fuer Zahlungsauftraege |
-| **Payment Worker** | — | Verarbeitet Zahlungsauftraege aus RabbitMQ |
-| **Camunda Worker** | — | Automatisiert Service Tasks im BPMN-Prozess |
-| **Workflow Engine** | 3001 | Sprint-3-Eigenimplementierung (ersetzt durch Camunda ab Sprint 4) |
+```powershell
+# 1. Alle Dienste starten (RabbitMQ, gRPC, Payment Worker, Camunda Worker)
+npm run start:servers
+
+# 2. Neuen Prozess per E-Mail-Simulation starten
+npm run trigger:email
+
+# 3. Manuelle Tasks im Browser bearbeiten
+# Tasklist: https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
+# Operate:  https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
+
+# 4. Alles stoppen
+npm run stop:servers
+```
 
 ---
 
 ## Voraussetzungen
 
-- Node.js 22.x LTS oder neuer
-- Docker Desktop (fuer RabbitMQ)
-- Camunda 8 SaaS Account
-- `.env`-Datei im Projektordner (siehe `.env.example`)
+| Voraussetzung | Version | Zweck |
+|---|---|---|
+| Node.js | 22.x LTS+ | Alle Services und Worker |
+| Docker Desktop | aktuell | RabbitMQ Container |
+| Camunda 8 SaaS | — | BPMN-Prozessausfuehrung |
+| `.env`-Datei | — | Camunda-Zugangsdaten (siehe `.env.example`) |
 
 ---
 
-## Sprint 4: Camunda Workflow starten
+## Systemarchitektur
 
-### Schritt 1 — Alles starten (ein Befehl)
-
-```powershell
-npm run start:servers
 ```
-
-Startet automatisch in einem Schritt:
-- RabbitMQ (Docker)
-- gRPC Service (Port 50051)
-- Payment Worker
-- **Camunda Worker** (oeffnet automatisch ein eigenes Terminalfenster)
-
-Warten bis `Start abgeschlossen.` erscheint — alle vier Dienste laufen dann.
-
-### Schritt 2 — Prozess per E-Mail triggern
-
-```powershell
-npm run trigger:email
-# Optional mit eigenen Absender/Betreff:
-node sprint4/trigger-from-email.js "lieferant@beispiel.de" "Rechnung April 2026"
+                    ┌─────────────────────────────────────┐
+                    │         Camunda 8 SaaS              │
+                    │   (Process_11wgywq, bru-2)          │
+                    └──────────────┬──────────────────────┘
+                                   │ gRPC (Port 26500)
+                    ┌──────────────▼──────────────────────┐
+                    │         Camunda Worker              │
+                    │      sprint4/camunda-worker.js      │
+                    │  receive-invoice                    │
+                    │  grpc-save-invoice ──────────────── ├──► gRPC Service :50051
+                    │  rabbitmq-payment  ──────────────── ├──► RabbitMQ :5672
+                    │  archive-invoice                    │         │
+                    │  rpa-erp-entry ─────────────────── ├──► Playwright Bot
+                    └─────────────────────────────────────┘         │
+                                                                     ▼
+                                                          ERP-Simulation (Browser)
 ```
-
-Startet eine neue Prozessinstanz in Camunda. Der Camunda Worker verarbeitet automatisch den ersten Schritt und die erste Aufgabe erscheint im Tasklist.
-
-### Schritt 3 — Prozess im Browser bearbeiten
-
-| Tool | URL |
-|---|---|
-| **Tasklist** (User Tasks ausfuellen) | https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
-| **Operate** (Prozess live verfolgen) | https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
-
-### Schritt 4 — Alles stoppen
-
-```powershell
-npm run stop:servers
-```
-
-Beendet alle Dienste: RabbitMQ, gRPC Service, Payment Worker und Camunda Worker.
 
 ---
 
 ## Vollstaendiger Prozessablauf
 
 ```
-[Terminal 3] npm run trigger:email
+npm run trigger:email
         │
-        │  Camunda SaaS startet Prozessinstanz (Process_11wgywq)
+        │   Camunda startet neue Prozessinstanz
         ▼
-[AUTOMATISCH] receive-invoice
+[AUTO] receive-invoice
         Generiert invoiceId = INV-<timestamp>
-        Speichert emailFrom, emailSubject, receivedAt
+        Speichert E-Mail-Metadaten als Prozessvariablen
         │
         ▼
-[MANUELL im Tasklist] Rechnungsdaten erfassen
-        Formular: rechnungserfassung.form
-        Felder: Lieferant, Rechnungsnummer, Betrag (EUR), Datum, Eingangskanal
+[MANUELL] Rechnungsdaten erfassen  (Tasklist)
+        Formular: Lieferant, Rechnungsnummer, Betrag (EUR), Datum, Eingangskanal
         │
         ▼
-[AUTOMATISCH] grpc-save-invoice
-        Ruft gRPC Service (Port 50051) auf
-        Speichert Rechnungsmetadaten
-        Setzt dataComplete = true/false
-        Bei Fehler → Boundary Event → Korrektur-Task fuer Sachbearbeiter
+[AUTO] grpc-save-invoice
+        Speichert Metadaten via gRPC Service (Port 50051)
+        Setzt dataComplete = true / false
         │
+        ├─ Fehler → Boundary Event → [MANUELL] Daten korrigieren → Retry
         ├─ dataComplete = false → [MANUELL] Fehlende Daten ergaenzen → zurueck
-        ▼ dataComplete = true
-[MANUELL im Tasklist] Rechnung pruefen und validieren
-        Formular: freigabe.form
-        Entscheidung: complianceNeeded? infoNeeded?
+        ▼
+[MANUELL] Rechnung pruefen und validieren  (Tasklist)
         │
-        ├─ complianceNeeded = true → [MANUELL] Compliance Check (Finanzabteilung)
-        ├─ infoNeeded = true → [MANUELL] Info beim Lieferanten anfragen → erhalten
-        ▼ (Normalfall)
-[MANUELL im Tasklist] Rechnung freigeben (Manager)
-        Formular: freigabe.form
+        ├─ complianceNeeded → [MANUELL] Compliance Check (Finanzabteilung)
+        ├─ infoNeeded → [MANUELL] Info beim Lieferanten anfragen → erhalten
+        ▼
+[MANUELL] Rechnung freigeben — Manager  (Tasklist)
         │
         ▼
-[MANUELL im Tasklist] Rechnungsdaten ins ERP System eingeben
-        Formular: erp-bestaetigung.form
-        Link zur ERP-Simulation: https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html
-        ERP-Referenznummer zurueck ins Formular eintragen
+[AUTO] rpa-erp-entry  ← Sprint 5: vollautomatisch per Playwright-Bot
+        Oeffnet ERP-System im Browser
+        Befuellt alle Felder mit Prozessvariablen
+        Speichert Screenshots als Audit-Trail
+        Gibt ERP-Referenznummer an Camunda zurueck
         │
         ▼
-[AUTOMATISCH] rabbitmq-payment
-        Sendet Zahlungsauftrag an RabbitMQ Queue payment_requests
-        Payment Worker verarbeitet die Zahlung
-        Bei Fehler → Boundary Event → End: "Zahlung fehlgeschlagen"
+[AUTO] rabbitmq-payment
+        Sendet Zahlungsauftrag an Queue payment_requests
+        Payment Worker verarbeitet und bestaetigt
+        │
+        ├─ Fehler → Boundary Event → End: "Zahlung fehlgeschlagen"
+        ▼
+[AUTO] archive-invoice
+        Schreibt Abschlusseintrag in event-log.csv
         │
         ▼
-[AUTOMATISCH] archive-invoice
-        Schreibt Eintrag in event-log.csv
-        │
-        ▼
-        END: "Rechnung verarbeitet"
+        ENDE: "Rechnung verarbeitet"
 ```
-
----
-
-## npm Scripts Uebersicht
-
-| Befehl | Beschreibung |
-|---|---|
-| `npm run start:servers` | RabbitMQ + gRPC + Payment Worker starten |
-| `npm run stop:servers` | Alle lokalen Server stoppen |
-| `npm run start:camunda-worker` | Camunda External Task Worker starten |
-| `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten |
-| `npm run start:workflow` | Sprint-3 Workflow Engine starten (Port 3001) |
-| `npm run check:grpc` | gRPC Verbindung testen |
-| `npm run check:messaging` | RabbitMQ Verbindung testen |
-| `npm run check:integration` | Beide Checks ausfuehren |
-| `npm run simulate:process` | Event-Daten fuer Process Mining generieren |
-| `npm run analyze:events` | Event-Logs konsolidieren (Celonis-Import) |
 
 ---
 
@@ -146,183 +115,274 @@ Beendet alle Dienste: RabbitMQ, gRPC Service, Payment Worker und Camunda Worker.
 
 ```
 invoicing-system/
-├── grpc-service/           # Sprint 1: gRPC Server (Port 50051)
-├── payment-system/         # Sprint 1: RabbitMQ Payment Worker
-├── client/                 # Sprint 1: Integrations-Clients
-├── workflow-engine/        # Sprint 3: Eigene Workflow Engine (Port 3001)
-├── sprint4/
-│   ├── G4_sprint_4.bpmn            # Ausfuehrbarer BPMN-Prozess (Camunda 8)
-│   ├── camunda-worker.js           # External Task Worker (4 Service Tasks)
-│   ├── trigger-from-email.js       # Prozess per E-Mail starten
+├── grpc-service/                   # Sprint 1: gRPC Server (Port 50051)
+│   ├── server.js
+│   └── event-logger.js
+├── payment-system/                 # Sprint 1: RabbitMQ Payment Worker
+│   ├── payment-worker.js
+│   └── event-logger.js
+├── client/                         # Sprint 1: Test-Clients
+│   ├── invoice-client.js
+│   ├── send-payment.js
+│   └── workflow-client.js
+├── workflow-engine/                # Sprint 3: Eigene Workflow Engine (Port 3001)
+│   └── server.js
+├── sprint4/                        # Sprint 4+5: Camunda-Implementierung
+│   ├── G4_sprint_4.bpmn            # BPMN-Prozess (deployed in Camunda)
+│   ├── camunda-worker.js           # External Task Worker (5 Tasks)
+│   ├── trigger-from-email.js       # E-Mail-Simulation: Prozess starten
 │   └── forms/
-│       ├── rechnungserfassung.form # Manuelle Rechnungserfassung
-│       ├── freigabe.form           # Pruefen / Freigeben
-│       └── erp-bestaetigung.form   # ERP-Erfassung bestaetigen
+│       ├── rechnungserfassung.form
+│       ├── freigabe.form
+│       └── erp-bestaetigung.form
+├── sprint5/                        # Sprint 5: RPA
+│   ├── rpa-erp-bot.js              # Playwright-Bot
+│   └── screenshots/                # Audit-Trail (nicht in Git)
 ├── docs/
-│   ├── sprint2/            # Process Mining Dokumentation
-│   └── sprint3/            # Soll-Prozess, Zielarchitektur, Optimierungen
-├── proto/invoice.proto     # gRPC Schnittstellendefinition
-├── Start-Server.ps1        # Infrastruktur starten
-├── Stop-Server.ps1         # Infrastruktur stoppen
-└── .env                    # Camunda SaaS + lokale Verbindungsdaten (nicht in Git)
+│   ├── sprint1/erklaerung-sprint1.md
+│   ├── sprint2/erklaerung-sprint2.md
+│   └── sprint3/                    # Soll-Prozess, Zielarchitektur, Optimierungen
+├── proto/invoice.proto             # gRPC Schnittstellendefinition
+├── analyze-events.js               # Bottleneck-Analyse + Celonis-Export
+├── simulate-process.js             # Event-Log Simulation (50 Faelle)
+├── Start-Server.ps1                # Alle Dienste starten
+├── Stop-Server.ps1                 # Alle Dienste stoppen
+├── .env                            # Zugangsdaten (nicht in Git)
+└── .env.example                    # Vorlage fuer .env
 ```
 
 ---
 
-## Fehlerbehandlung im Prozess
+## npm Scripts
 
-| Fehlerfall | Verhalten |
+| Befehl | Beschreibung |
 |---|---|
-| gRPC nicht erreichbar | Boundary Error → Korrektur-Task fuer Sachbearbeiter → Retry |
-| RabbitMQ nicht erreichbar | Boundary Error → End Event "Zahlung fehlgeschlagen" |
-| Camunda Worker 504 | SDK wiederholt automatisch bis Cluster aufgewacht ist |
+| `npm run start:servers` | RabbitMQ + gRPC + Payment Worker + Camunda Worker starten |
+| `npm run stop:servers` | Alle Dienste stoppen |
+| `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten |
+| `npm run rpa:test` | RPA-Bot isoliert testen (headless) |
+| `npm run rpa:demo` | RPA-Bot mit sichtbarem Browser + Video (Praesentation) |
+| `npm run start:camunda-worker` | Nur Camunda Worker starten (ohne andere Dienste) |
+| `npm run start:workflow` | Sprint-3 Workflow Engine starten (Port 3001) |
+| `npm run simulate:process` | 50 Rechnungsfaelle mit 4 Varianten generieren |
+| `npm run analyze:events` | Logs konsolidieren + Bottlenecks berechnen |
+| `npm run check:grpc` | gRPC Verbindung testen |
+| `npm run check:messaging` | RabbitMQ + Zahlungsfluss testen |
+| `npm run check:integration` | Beide Checks hintereinander |
 
 ---
 
-## Process Mining (Sprint 2)
+## Sprint-Dokumentation
 
+### Sprint 1 — Bausteine und Integrationsarchitektur
+
+**Aufgabe:** gRPC Service, Zahlungssystem via Messaging, Client
+
+| Komponente | Datei | Beschreibung |
+|---|---|---|
+| gRPC Service | `grpc-service/server.js` | Speichert und liefert Rechnungsmetadaten (Port 50051) |
+| Payment Worker | `payment-system/payment-worker.js` | Verarbeitet Zahlungsauftraege aus RabbitMQ |
+| gRPC Client | `client/invoice-client.js` | Testet Speichern und Abrufen |
+| Payment Client | `client/send-payment.js` | Testet Zahlungsauftrag via RabbitMQ |
+| Proto-Definition | `proto/invoice.proto` | gRPC Schnittstellenvertrag |
+
+Testen:
 ```powershell
-npm run simulate:process   # 50 Rechnungsfaelle + 4 Varianten generieren
-npm run analyze:events     # consolidated-event-log.csv erstellen
+npm run start:servers
+npm run check:integration
 ```
 
-Celonis Import: `consolidated-event-log.csv` → Spalten: `case_id`, `activity`, `timestamp`, `resource`
-
-Prozess-Varianten:
-- **A (60%)**: Happy Path — Rechnung erfolgreich verarbeitet
-- **B (20%)**: Payment Retry — Zahlung wiederholt
-- **C (10%)**: Duplicate Invoice — Duplikat abgewiesen
-- **D (10%)**: Invoice Not Found — Rechnung nicht gefunden
-
 ---
 
----
+### Sprint 2 — Process Mining und Prozessanalyse
 
-## Sprint 5: RPA – Automatische ERP-Erfassung
-
-**Ziel:** Der ERP-Schritt wird nicht mehr manuell ausgefuehrt, sondern ein Playwright-Bot befuellt das ERP-Formular automatisch.
-
-### Was passiert automatisch
-
-Der RPA-Bot (`sprint5/rpa-erp-bot.js`):
-1. Oeffnet `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
-2. Klickt "+ Neue Rechnung"
-3. Befuellt alle Felder mit den Camunda-Prozessvariablen:
-   - Rechnungsnummer, Datum, Lieferantenname, Rechnungs-ID, Zahlungsziel
-4. Fuegt eine Rechnungsposition mit Betrag (19% MwSt.) hinzu
-5. Speichert die Rechnung im ERP
-6. Erstellt **zwei Screenshots** (vor + nach Speichern) als Audit-Trail
-7. Gibt die ERP-interne Referenznummer zurueck an Camunda
-
-### RPA-Bot direkt testen
+**Aufgabe:** Celonis Process Mining, Prozessvarianten, Bottlenecks
 
 ```powershell
-# Headless (unsichtbar, fuer CI/automatischen Betrieb)
+npm run simulate:process   # Generiert event-log.csv mit 50 Faellen
+npm run analyze:events     # Erstellt consolidated-event-log.csv + Bottleneck-Report
+```
+
+Celonis-Import: `consolidated-event-log.csv` — Spalten: `case_id`, `activity`, `timestamp`, `resource`
+
+Prozessvarianten:
+
+| Variante | Anteil | Ablauf |
+|---|---|---|
+| A — Happy Path | 60% | Rechnung empfangen → gespeichert → Zahlung verarbeitet |
+| B — Payment Retry | 20% | Zahlung schlaegt fehl → wird wiederholt |
+| C — Duplicate Invoice | 10% | Zweite identische Rechnung wird abgewiesen |
+| D — Invoice Not Found | 10% | Rechnung beim Abruf nicht gefunden |
+
+Dokumentation: `docs/sprint2/erklaerung-sprint2.md`
+
+---
+
+### Sprint 3 — Soll-Prozess und Zielarchitektur
+
+**Aufgabe:** BPMN Soll-Prozess, Systemarchitektur, Optimierungspotenziale
+
+| Artefakt | Datei |
+|---|---|
+| BPMN Soll-Prozess | `docs/sprint3/sollprozess.bpmn` |
+| Zielarchitektur | `docs/sprint3/zielarchitektur.md` |
+| Optimierungspotenziale | `docs/sprint3/optimierungspotenziale.md` |
+| Eigene Workflow Engine | `workflow-engine/server.js` (Port 3001) |
+
+Workflow Engine Endpunkte:
+```
+POST /workflows/start
+POST /workflows/:workflowId/approve
+GET  /workflows/:workflowId
+GET  /workflows
+```
+
+---
+
+### Sprint 4 — Workflow Implementierung mit Camunda
+
+**Aufgabe:** Digitaler Freigabeprozess in Camunda 8
+
+| Artefakt | Datei | Beschreibung |
+|---|---|---|
+| BPMN Prozess | `sprint4/G4_sprint_4.bpmn` | Deployed in Camunda SaaS als `Process_11wgywq` |
+| Camunda Worker | `sprint4/camunda-worker.js` | Automatisiert alle Service Tasks |
+| E-Mail-Trigger | `sprint4/trigger-from-email.js` | Startet neuen Prozess |
+| Formular Erfassung | `sprint4/forms/rechnungserfassung.form` | Manuelle Dateneingabe |
+| Formular Pruefung | `sprint4/forms/freigabe.form` | Validierung und Freigabe |
+| Formular ERP | `sprint4/forms/erp-bestaetigung.form` | ERP-Bestaetigung (Sprint 4) |
+
+Camunda URLs:
+
+| Tool | URL |
+|---|---|
+| Tasklist | https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
+| Operate | https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
+| Web Modeler | https://modeler.camunda.io |
+
+---
+
+### Sprint 5 — RPA fuer ERP-Erfassung
+
+**Aufgabe:** Bot automatisiert die Dateneingabe ins ERP-System
+
+Der Playwright-Bot (`sprint5/rpa-erp-bot.js`) ersetzt den manuellen ERP-Task:
+
+1. Oeffnet `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
+2. Legt eine neue Rechnung an
+3. Befuellt alle Felder (Rechnungsnummer, Datum, Lieferant, Betrag inkl. 19% MwSt.)
+4. Speichert im ERP-System
+5. Erstellt zwei Screenshots als Audit-Trail (`sprint5/screenshots/`)
+6. Gibt die ERP-interne Referenznummer an Camunda zurueck
+
+Bot testen:
+```powershell
+# Headless (Standard)
 npm run rpa:test
 
-# Demo-Modus (sichtbarer Browser + Video, fuer Praesentationen)
+# Sichtbarer Browser mit Video — ideal fuer Praesentation
 npm run rpa:demo
-```
 
-Mit eigenen Testdaten:
-```powershell
-$env:INV_ID="INV-2026-001"; $env:SUPPLIER="BMW AG"; $env:AMOUNT="5000"; node sprint5/rpa-erp-bot.js
-```
-
-Screenshots werden gespeichert unter: `sprint5/screenshots/`
-
-### BPMN-Aenderung (Sprint 5)
-
-`Task_EnterERP` wurde von **UserTask → ServiceTask** umgestellt:
-
-| Vorher (Sprint 4) | Nachher (Sprint 5) |
-|---|---|
-| Manuelles Formular im Tasklist | Automatisch durch RPA-Bot |
-| `formId: erp-bestaetigung` | `type: rpa-erp-entry` |
-
-### Was du in Camunda tun musst
-
-Du musst das aktualisierte BPMN einmalig neu deployen:
-
-1. **Camunda Web Modeler** oeffnen: https://modeler.camunda.io
-2. Deinen Prozess (`Process_11wgywq`) oeffnen
-3. Den Task **"Rechnungsdaten ins ERP System eingeben"** anklicken
-4. Im Properties-Panel: Typ von **User Task** auf **Service Task** aendern
-5. Task-Definition Type eintragen: `rpa-erp-entry`
-6. **Deploy** klicken → Version 3 wird erstellt
-
-Ab dann laeuft der ERP-Schritt vollautomatisch ohne manuellen Eingriff.
-
-### Projektstruktur Sprint 5
-
-```
-sprint5/
-├── rpa-erp-bot.js      # Playwright-Bot (ERP-Automatisierung)
-└── screenshots/        # Audit-Trail (Screenshots + Videos, nicht in Git)
+# Mit eigenen Testdaten
+$env:INV_ID="INV-001"; $env:SUPPLIER="BMW AG"; $env:AMOUNT="5000"
+node sprint5/rpa-erp-bot.js
 ```
 
 ---
 
-## Hinweis zu manuellen Schritten (Sprint 4)
+## Fehlerbehandlung
 
-Die Rechnungserfassung und ERP-Eingabe sind in Sprint 4 bewusst manuell:
-
-- **Sprint 5 (RPA)**: Bot automatisiert die ERP-Dateneingabe
-- **Sprint 6 (AI Agent)**: KI extrahiert Rechnungsdaten aus PDF und befuellt das Formular vor
+| Fehlerfall | Wo | Verhalten |
+|---|---|---|
+| gRPC nicht erreichbar | `grpc-save-invoice` | Boundary Error → Korrektur-Task fuer Sachbearbeiter → Retry |
+| Daten unvollstaendig | `grpc-save-invoice` | Gateway → Task "Fehlende Daten ergaenzen" |
+| RabbitMQ nicht erreichbar | `rabbitmq-payment` | Boundary Error → End Event "Zahlung fehlgeschlagen" |
+| Zahlung schlaegt fehl (10%) | `payment-worker` | Nachricht bleibt in Queue → automatischer Retry |
+| RPA-Bot schlaegt fehl | `rpa-erp-entry` | 2 automatische Wiederholungsversuche mit 5s Verzoegerung |
+| Camunda Cluster schlaeft | `trigger-from-email` | SDK wiederholt automatisch bis Cluster antwortet |
+| Payment Worker Verbindungsverlust | `payment-worker` | Exponentieller Backoff: 1s, 2s, 4s, 8s, max. 15s |
 
 ---
 
 ## Extras und Erweiterungen
 
-Folgende Features wurden über die Sprint-Anforderungen hinaus implementiert:
+Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 
-### Infrastruktur & Betrieb
+### Sprint 1 — Bausteine
 
-| Feature | Beschreibung |
+| Gefordert | Extra | Beschreibung |
+|---|---|---|
+| gRPC Service | | Speichert Rechnungsmetadaten auf Port 50051 |
+| Zahlungssystem via Messaging | | RabbitMQ Payment Worker |
+| Client | | `invoice-client.js` + `send-payment.js` |
+| | ✅ Duplikaterkennung gRPC | Server weist doppelte Rechnungen mit `ALREADY_EXISTS` ab |
+| | ✅ Duplikaterkennung Payment | Worker haelt Set bezahlter Rechnungen — doppelte Zahlungen werden verworfen |
+| | ✅ Payment-Status-Queue | Zweite Queue `payment_status_updates` sendet Rueckmeldung (PROCESSED / FAILED / DUPLICATE_REJECTED) |
+| | ✅ Exponentieller Backoff | Reconnect nach 1s, 2s, 4s, 8s bis max. 15s |
+| | ✅ Simulierter Zahlungsfehler | 10% Fehlerquote erzeugt realistische Process-Mining-Varianten |
+| | ✅ Geldbetraege in Cent | `int64` statt Float — kein Rundungsfehler moeglich |
+| | ✅ Event-Logging pro Service | Jeder Service schreibt eigene `event-log.csv` |
+
+### Sprint 2 — Process Mining
+
+| Gefordert | Extra | Beschreibung |
+|---|---|---|
+| Celonis Process Mining | | Import und Analyse durchgefuehrt |
+| Prozessvarianten + Bottlenecks | | Dokumentiert in `docs/sprint2/` |
+| | ✅ Prozess-Simulation | 50 Rechnungsfaelle mit 4 Varianten generiert — kein manuelles Erzeugen noetig |
+| | ✅ Automatische Bottleneck-Analyse | Durchschnitts-/Min-/Max-Zeiten fuer jede Transition berechnet |
+| | ✅ Log-Konsolidierung | Logs aus allen Services werden zusammengefuehrt und als saubere CSV exportiert |
+
+### Sprint 3 — Soll-Prozess
+
+| Gefordert | Extra | Beschreibung |
+|---|---|---|
+| BPMN Soll-Prozess | | `docs/sprint3/sollprozess.bpmn` |
+| Systemarchitektur | | `docs/sprint3/zielarchitektur.md` |
+| | ✅ Eigene Workflow Engine | Vollstaendige REST API mit Endpunkten; aktualisiert Prozessstatus automatisch wenn Zahlung eintrifft |
+
+### Sprint 4 — Workflow Implementierung
+
+| Gefordert | Extra | Beschreibung |
+|---|---|---|
+| Start per E-Mail | | Start-Event im BPMN |
+| Manuelle Metadaten-Extraktion | | `rechnungserfassung.form` |
+| Speicherung per gRPC | | `grpc-save-invoice` Worker |
+| ERP-Erfassung manuell | | `erp-bestaetigung.form` |
+| Zahlung via Messaging | | `rabbitmq-payment` Worker |
+| | ✅ E-Mail-Trigger Script | Startet Prozessinstanz mit simulierten E-Mail-Metadaten (Absender, Betreff, Zeitstempel) |
+| | ✅ BPMN Boundary Error Events | gRPC-Fehler → Korrektur-Task; Payment-Fehler → dediziertes End Event |
+| | ✅ Datenvollstaendigkeit per Gateway | Worker setzt `dataComplete` — BPMN entscheidet automatisch ob Nacherfassung noetig ist |
+| | ✅ Compliance- und Info-Gateways | Optionale Prozesszweige fuer Finanzpruefung und Lieferanten-Rueckfragen |
+| | ✅ ERP-Formular mit Prozesskontext | Formular zeigt Rechnungsdaten direkt aus Camunda-Variablen |
+| | ✅ Datumsnormalisierung | ISO-Format automatisch auf YYYY-MM-DD normalisiert |
+| | ✅ IPv4-Fix | `localhost` → `127.0.0.1` verhindert IPv6-Fehler unter Windows |
+| | ✅ Persistente RabbitMQ-Verbindung | Auto-Reconnect statt Neuverbindung pro Job |
+| | ✅ Camunda 504 Retry | Trigger wartet automatisch bis Cluster aus Standby aufgewacht ist |
+| | ✅ Vollstaendiges Event-Logging | Alle 5 automatischen Schritte schreiben Celonis-kompatible Events |
+
+### Sprint 5 — RPA
+
+| Gefordert | Extra | Beschreibung |
+|---|---|---|
+| RPA-Bot befuellt ERP-Formular | | Playwright-Bot befuellt alle Felder, speichert Rechnung |
+| | ✅ Screenshots als Audit-Trail | Zwei Screenshots pro Vorgang (vor + nach Speichern) |
+| | ✅ Demo-Modus | Sichtbarer Browser mit verlangsamter Ausfuehrung fuer Praesentation |
+| | ✅ Video-Aufnahme | Playwright zeichnet gesamte Automatisierung als `.webm` auf |
+| | ✅ ERP-Referenznummer in Camunda | ERP-interne ID wird als Prozessvariable zurueckgegeben |
+| | ✅ Automatischer Retry | Camunda startet RPA-Task bei Fehlern 2x neu (5s Verzoegerung) |
+| | ✅ Isolierter Testlauf | Bot unabhaengig von Camunda mit eigenen Testdaten testbar |
+
+### Infrastruktur (sprintuebergreifend)
+
+| Extra | Beschreibung |
 |---|---|
-| **Ein-Kommando-Start** | `npm run start:servers` startet RabbitMQ (Docker), gRPC-Service und Payment Worker in einem Schritt |
-| **Ein-Kommando-Stop** | `npm run stop:servers` beendet alle lokalen Prozesse sauber |
-| **Idempotenter Start** | Das Start-Skript erkennt bereits laufende Dienste und startet sie nicht doppelt |
-| **Port-Pruefung** | Start-Skript wartet aktiv bis Ports erreichbar sind, bevor es "fertig" meldet |
-| **npm Scripts** | Alle Operationen per `npm run ...` aufrufbar — kein manuelles `node ...` noetig |
-
-### Zuverlaessigkeit & Fehlertoleranz
-
-| Feature | Beschreibung |
-|---|---|
-| **Exponentieller Backoff** | Payment Worker verbindet sich nach RabbitMQ-Ausfall automatisch neu (1s → 15s) |
-| **Persistente RabbitMQ-Verbindung** | Camunda Worker haelt eine dauerhafte Verbindung zu RabbitMQ statt jedes Mal neu zu verbinden |
-| **IPv4-Fix** | `localhost` wird automatisch zu `127.0.0.1` aufgeloest (verhindert IPv6-Fehler unter Windows) |
-| **Duplikaterkennung** | gRPC Service und Payment Worker erkennen doppelte Rechnungen und Zahlungen |
-| **Camunda 504 Retry** | `trigger-from-email.js` wartet automatisch bis der Camunda-Cluster aus dem Standby aufgewacht ist |
-| **dataComplete-Pruefung** | `grpc-save-invoice` Worker prueft automatisch ob alle Pflichtfelder ausgefuellt sind und setzt `dataComplete = true/false` |
-
-### Camunda Workflow
-
-| Feature | Beschreibung |
-|---|---|
-| **E-Mail-Trigger Script** | `npm run trigger:email` simuliert eine eingehende E-Mail und startet automatisch eine neue Prozessinstanz |
-| **BPMN Fehlerbehandlung** | Boundary Events fuer gRPC-Fehler (→ Korrektur-Task) und Payment-Fehler (→ End Event) |
-| **BPMN-Variable dataComplete** | Automatische Weichenstellung ob Daten vollstaendig sind oder nacherfasst werden muessen |
-| **ERP-Referenznummer** | RPA-Bot gibt die ERP-interne ID zurueck und speichert sie als Prozessvariable in Camunda |
-
-### RPA (Sprint 5)
-
-| Feature | Beschreibung |
-|---|---|
-| **Demo-Modus** | `npm run rpa:demo` startet den Bot mit sichtbarem Browser — ideal fuer Praesentation beim Professor |
-| **Video-Aufnahme** | Im Demo-Modus wird die gesamte Browser-Automatisierung als `.webm` Video aufgezeichnet |
-| **Screenshots als Audit-Trail** | Zwei Screenshots pro Vorgang (vor + nach dem Speichern) werden automatisch abgelegt |
-| **Direkter Testlauf** | Bot kann mit `npm run rpa:test` unabhaengig von Camunda getestet werden |
-| **Konfigurierbare Testdaten** | Umgebungsvariablen (`INV_ID`, `SUPPLIER`, `AMOUNT`) erlauben einfaches Testen mit eigenen Werten |
-
-### Process Mining (Sprint 2)
-
-| Feature | Beschreibung |
-|---|---|
-| **Prozess-Simulation** | `npm run simulate:process` generiert 50 realistische Rechnungsfaelle mit 4 Prozessvarianten |
-| **Konsolidierter Event-Log** | `npm run analyze:events` fuehrt alle Event-Logs zusammen fuer den Celonis-Import |
-| **4 Prozessvarianten** | Happy Path, Payment Retry, Duplicate Invoice, Invoice Not Found — mit realistischen Haeufigkeiten |
+| ✅ Ein-Kommando-Start | `npm run start:servers` startet alle 4 Dienste automatisch |
+| ✅ Camunda Worker im eigenen Fenster | Oeffnet sich automatisch separat damit Job-Logs sichtbar sind |
+| ✅ Ein-Kommando-Stop | Beendet alle 4 Dienste sauber, auch ohne gespeicherte PIDs |
+| ✅ Idempotenter Start | Erkennt laufende Prozesse und startet nicht doppelt |
+| ✅ Aktive Port-Pruefung | Wartet bis Ports 50051 und 5672 tatsaechlich erreichbar sind |
+| ✅ npm Scripts fuer alle Operationen | Kein manuelles `node ...` noetig |
 
 ---
 
@@ -332,7 +392,8 @@ Folgende Features wurden über die Sprint-Anforderungen hinaus implementiert:
 |---|---|
 | `ECONNREFUSED 50051` | `npm run start:servers` ausfuehren |
 | `ECONNREFUSED 5672` | Docker Desktop starten, dann `npm run start:servers` |
-| Camunda 504 | Operate im Browser oeffnen (Cluster aufwecken), dann erneut versuchen |
+| Camunda 504 beim Trigger | Operate im Browser oeffnen (Cluster aufwecken), dann erneut versuchen |
 | Worker 401 Unauthorized | `.env` pruefen: `ZEEBE_CLIENT_ID` und `ZEEBE_CLIENT_SECRET` korrekt? |
-| Task haengt in Operate | Operate → Instanz anklicken → Modify → Token verschieben |
-| Formular fehlt im Tasklist | BPMN + alle 3 Formulare zusammen neu in Camunda deployen |
+| Task haengt in Operate | Operate → Instanz → Modify → Token verschieben |
+| Formular fehlt im Tasklist | BPMN + alle Formulare zusammen neu in Camunda deployen |
+| RPA-Bot schlaegt fehl | `npm run rpa:test` zum isolierten Testen; `RPA_HEADLESS=false` fuer sichtbare Ausfuehrung |
