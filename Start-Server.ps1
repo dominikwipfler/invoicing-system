@@ -1,5 +1,6 @@
 param(
   [switch]$SkipRabbitMq,
+  [switch]$IncludeCamundaWorker,
   [switch]$NoWait
 )
 
@@ -10,10 +11,14 @@ $runtimeDir = Join-Path $scriptRoot '.runtime'
 $statePath = Join-Path $runtimeDir 'server-state.json'
 
 function Write-Banner {
-  Write-Box -Lines @(
+  $bannerLines = @(
     'Invoicing System Start',
     'RabbitMQ + gRPC Service + Payment Worker'
-  ) -Color Magenta
+  )
+  if ($IncludeCamundaWorker) {
+    $bannerLines[1] += ' + Camunda Worker'
+  }
+  Write-Box -Lines $bannerLines -Color Magenta
 }
 
 function Write-Step {
@@ -321,6 +326,20 @@ $runtimeServices += [ordered]@{
   Status = $paymentService.Status
 }
 
+$camundaService = $null
+if ($IncludeCamundaWorker) {
+  Write-Step '4/3' 'Camunda Worker starten'
+  $camundaService = Start-NodeService -Name 'Camunda Worker' -RelativePath 'sprint4/camunda-worker.js'
+  $services += $camundaService
+  $runtimeServices += [ordered]@{
+    Name = $camundaService.Name
+    Type = 'node'
+    ProcessId = $camundaService.ProcessId
+    ScriptPath = (Join-Path $scriptRoot 'sprint4/camunda-worker.js')
+    Status = $camundaService.Status
+  }
+}
+
 if (-not $NoWait) {
   Write-Section 'Zwischenstände'
   $grpcReady = Test-TcpPort -HostName '127.0.0.1' -Port 50051 -TimeoutSeconds 20
@@ -345,11 +364,15 @@ else {
   $rabbitReady = $SkipRabbitMq
 }
 
-Write-SummaryBox -Lines @(
+$summaryLines = @(
   @{ Label = 'RabbitMQ'; Value = 'localhost:5672 | http://localhost:15672' },
   @{ Label = 'gRPC Service'; Value = 'localhost:50051'; Color = [ConsoleColor]::Green },
   @{ Label = 'Payment Worker'; Value = 'Queue payment_requests'; Color = [ConsoleColor]::Green }
 )
+if ($IncludeCamundaWorker) {
+  $summaryLines += @{ Label = 'Camunda Worker'; Value = 'Zeebe/Camunda 8 SaaS'; Color = [ConsoleColor]::Green }
+}
+Write-SummaryBox -Lines $summaryLines
 
 Write-Section 'Gestartete Dienste'
 foreach ($service in $services) {
