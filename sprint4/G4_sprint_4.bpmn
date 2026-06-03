@@ -213,15 +213,23 @@
       <bpmn:outgoing>Flow_Approve_ERP</bpmn:outgoing>
     </bpmn:userTask>
 
-    <!-- Datenerfassung: ERP-Erfassung -->
-    <bpmn:userTask id="Task_EnterERP" name="Rechnungsdaten ins&#10;ERP System eingeben">
+    <!-- Datenerfassung: ERP-Erfassung (Sprint 5: automatisch per RPA) -->
+    <bpmn:serviceTask id="Task_EnterERP" name="Rechnungsdaten ins&#10;ERP System eingeben (RPA)">
       <bpmn:extensionElements>
-        <zeebe:userTask/>
-        <zeebe:formDefinition formId="erp-bestaetigung"/>
+        <zeebe:taskDefinition type="rpa-erp-entry"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="=invoiceId"     target="invoiceId"/>
+          <zeebe:input source="=supplierName"  target="supplierName"/>
+          <zeebe:input source="=invoiceNumber" target="invoiceNumber"/>
+          <zeebe:input source="=amountEuro"    target="amountEuro"/>
+          <zeebe:input source="=invoiceDate"   target="invoiceDate"/>
+          <zeebe:output source="=erpReferenzNummer" target="erpReferenzNummer"/>
+          <zeebe:output source="=erpErfasst"   target="erpErfasst"/>
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Approve_ERP</bpmn:incoming>
       <bpmn:outgoing>Flow_ERP_Payment</bpmn:outgoing>
-    </bpmn:userTask>
+    </bpmn:serviceTask>
 
     <!-- System: Zahlung via RabbitMQ (automatisch) -->
     <bpmn:serviceTask id="Task_Payment" name="Zahlung an&#10;Zahlungssystem senden">

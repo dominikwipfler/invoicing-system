@@ -138,20 +138,24 @@ Write-Banner
 
 if (-not (Test-Path $statePath)) {
   Write-Warn 'Keine Laufzeitdatei gefunden. Versuche, die bekannten Prozesse direkt zu beenden.'
-  Write-Step '1/3' 'gRPC Service beenden'
+
+  Write-Step '1/4' 'gRPC Service beenden'
   Stop-NodeByScriptPattern -Pattern 'grpc-service[\\/]server\.js' -Label 'gRPC Service'
   Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
 
-  Write-Step '2/3' 'Payment Worker beenden'
+  Write-Step '2/4' 'Payment Worker beenden'
   Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
 
-  Write-Step '3/3' 'RabbitMQ beenden'
+  Write-Step '3/4' 'Camunda Worker beenden'
+  Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
+
+  Write-Step '4/4' 'RabbitMQ beenden'
   Stop-RabbitMq
 }
 else {
   $state = Get-Content $statePath -Raw | ConvertFrom-Json
 
-  Write-Step '1/3' 'gRPC Service beenden'
+  Write-Step '1/4' 'gRPC Service beenden'
   $grpcService = $state.Services | Where-Object { $_.Name -eq 'gRPC Service' } | Select-Object -First 1
   if ($grpcService) {
     $stopped = Stop-NodeProcess -ProcessId ([int]$grpcService.ProcessId) -Label 'gRPC Service'
@@ -165,7 +169,7 @@ else {
     Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
   }
 
-  Write-Step '2/3' 'Payment Worker beenden'
+  Write-Step '2/4' 'Payment Worker beenden'
   $paymentService = $state.Services | Where-Object { $_.Name -eq 'Payment Worker' } | Select-Object -First 1
   if ($paymentService) {
     $stopped = Stop-NodeProcess -ProcessId ([int]$paymentService.ProcessId) -Label 'Payment Worker'
@@ -177,7 +181,10 @@ else {
     Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
   }
 
-  Write-Step '3/3' 'RabbitMQ beenden'
+  Write-Step '3/4' 'Camunda Worker beenden'
+  Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
+
+  Write-Step '4/4' 'RabbitMQ beenden'
   Stop-RabbitMq
 
   Remove-Item $statePath -Force -ErrorAction SilentlyContinue

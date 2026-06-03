@@ -16,6 +16,8 @@
     "start:workflow": "node workflow-engine/server.js",
     "start:camunda-worker": "node sprint4/camunda-worker.js",
     "trigger:email": "node sprint4/trigger-from-email.js",
+    "rpa:test": "node sprint5/rpa-erp-bot.js",
+    "rpa:demo": "cross-env RPA_HEADLESS=false node sprint5/rpa-erp-bot.js",
     "simulate:process": "node simulate-process.js",
     "analyze:events": "node analyze-events.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -28,7 +30,9 @@
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "amqplib": "^1.0.2",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "playwright": "^1.60.0"
   }
 }

@@ -282,7 +282,7 @@ Write-Banner
 $services = @()
 $runtimeServices = @()
 
-Write-Step '1/3' 'RabbitMQ starten'
+Write-Step '1/4' 'RabbitMQ starten'
 $rabbitService = Start-RabbitMq
 $services += $rabbitService
 $runtimeServices += [ordered]@{
@@ -292,7 +292,7 @@ $runtimeServices += [ordered]@{
   Status = $rabbitService.Status
 }
 
-Write-Step '2/3' 'gRPC Service starten'
+Write-Step '2/4' 'gRPC Service starten'
 $grpcService = Start-NodeService -Name 'gRPC Service' -RelativePath 'grpc-service/server.js'
 $services += $grpcService
 $runtimeServices += [ordered]@{
@@ -310,7 +310,7 @@ if (-not $NoWait) {
   }
 }
 
-Write-Step '3/3' 'Payment Worker starten'
+Write-Step '3/4' 'Payment Worker starten'
 $paymentService = Start-NodeService -Name 'Payment Worker' -RelativePath 'payment-system/payment-worker.js'
 $services += $paymentService
 $runtimeServices += [ordered]@{
@@ -319,6 +319,22 @@ $runtimeServices += [ordered]@{
   ProcessId = $paymentService.ProcessId
   ScriptPath = (Join-Path $scriptRoot 'payment-system/payment-worker.js')
   Status = $paymentService.Status
+}
+
+Write-Step '4/4' 'Camunda Worker starten (eigenes Fenster)'
+$camundaWorkerScript = Join-Path $scriptRoot 'sprint4/camunda-worker.js'
+$existingCamunda = Get-CimInstance Win32_Process | Where-Object {
+  $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match 'sprint4[\\/]camunda-worker\.js'
+} | Select-Object -First 1
+
+if ($existingCamunda) {
+  Write-Info "Camunda Worker laeuft bereits (PID $($existingCamunda.ProcessId))."
+  $services += [pscustomobject]@{ Name = 'Camunda Worker'; Status = 'bereits aktiv'; ProcessId = [int]$existingCamunda.ProcessId }
+} else {
+  Write-Info 'Camunda Worker wird in neuem Fenster gestartet...'
+  Start-Process pwsh -ArgumentList '-NoExit', '-Command', "cd '$scriptRoot'; node sprint4/camunda-worker.js" -WindowStyle Normal
+  Write-Success 'Camunda Worker gestartet (separates Fenster).'
+  $services += [pscustomobject]@{ Name = 'Camunda Worker'; Status = 'gestartet (separates Fenster)' }
 }
 
 if (-not $NoWait) {
@@ -346,9 +362,10 @@ else {
 }
 
 Write-SummaryBox -Lines @(
-  @{ Label = 'RabbitMQ'; Value = 'localhost:5672 | http://localhost:15672' },
-  @{ Label = 'gRPC Service'; Value = 'localhost:50051'; Color = [ConsoleColor]::Green },
-  @{ Label = 'Payment Worker'; Value = 'Queue payment_requests'; Color = [ConsoleColor]::Green }
+  @{ Label = 'RabbitMQ';       Value = 'localhost:5672 | http://localhost:15672' },
+  @{ Label = 'gRPC Service';   Value = 'localhost:50051' },
+  @{ Label = 'Payment Worker'; Value = 'Queue payment_requests' },
+  @{ Label = 'Camunda Worker'; Value = 'Verbunden mit Camunda SaaS (separates Fenster)' }
 )
 
 Write-Section 'Gestartete Dienste'
@@ -361,10 +378,10 @@ foreach ($service in $services) {
   }
 }
 
-Write-Section 'Nächste Schritte'
-Write-Host '  1. Rechnungs-Flow testen: node client/invoice-client.js' -ForegroundColor White
-Write-Host '  2. Zahlungs-Flow testen: node client/send-payment.js' -ForegroundColor White
-Write-Host '  3. Alles stoppen: .\Stop-Server.ps1' -ForegroundColor White
+Write-Section 'Naechste Schritte'
+Write-Host '  1. Prozess starten:   npm run trigger:email' -ForegroundColor White
+Write-Host '  2. Tasklist oeffnen:  https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e' -ForegroundColor White
+Write-Host '  3. Alles stoppen:     .\Stop-Server.ps1' -ForegroundColor White
 
 Write-Host ''
 Write-Host 'Start abgeschlossen.' -ForegroundColor Green

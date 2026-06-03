@@ -282,3 +282,5 @@ INV-1780477612052,Invoice Email Received,2026-06-03T09:06:52.054Z,camunda-worker
 INV-1780477612052,gRPC Save Success,2026-06-03T09:08:19.455Z,camunda-worker
 INV-1780477612052,Payment Sent to RabbitMQ,2026-06-03T09:12:57.684Z,camunda-worker
 INV-1780477612052,Invoice Archived,2026-06-03T09:12:58.121Z,camunda-worker
+INV-1780486801603,RPA ERP Entry Started,2026-06-03T11:41:32.514Z,camunda-worker
+INV-1780486801603,RPA ERP Entry Completed,2026-06-03T11:41:36.237Z,camunda-worker
