@@ -12,7 +12,10 @@
     "check:integration": "npm run check:grpc && npm run check:messaging",
     "check:workflow": "node client/workflow-client.js",
     "start:servers": "powershell -ExecutionPolicy Bypass -File .\\Start-Server.ps1",
+    "stop:servers": "powershell -ExecutionPolicy Bypass -File .\\Stop-Server.ps1",
     "start:workflow": "node workflow-engine/server.js",
+    "start:camunda-worker": "node sprint4/camunda-worker.js",
+    "trigger:email": "node sprint4/trigger-from-email.js",
     "simulate:process": "node simulate-process.js",
     "analyze:events": "node analyze-events.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -21,9 +24,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@camunda8/sdk": "^8.8.11",
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "amqplib": "^1.0.2",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1"
   }
 }
