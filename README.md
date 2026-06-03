@@ -27,28 +27,40 @@ Digitalisierung der Eingangsrechnungsbearbeitung mit gRPC, Messaging (RabbitMQ) 
 
 ## Sprint 4: Camunda Workflow starten
 
-### Schritt 1 — Infrastruktur starten
+### Option A: Automatische Infrastruktur mit Camunda Worker
+
+```powershell
+# Startet automatisch: RabbitMQ + gRPC Service + Payment Worker + Camunda Worker
+npm run start:servers -- -IncludeCamundaWorker
+# oder direkt:
+powershell -ExecutionPolicy Bypass -File .\Start-Server.ps1 -IncludeCamundaWorker
+```
+
+Die externe Task Worker-Verbindung wird dabei automatisch zu Camunda 8 SaaS aufgebaut.
+
+### Option B: Manuelle Kontrolle (separates Terminal)
+
+Wenn Sie nur die Basis-Infrastruktur starten möchten:
 
 ```powershell
 npm run start:servers
 ```
 
-Startet automatisch: RabbitMQ (Docker) + gRPC Service (Port 50051) + Payment Worker.
-Warten bis `Start abgeschlossen.` erscheint.
-
-### Schritt 2 — Camunda Worker starten (separates Terminal)
+Danach in **separatem Terminal** den Camunda Worker starten:
 
 ```powershell
 npm run start:camunda-worker
+# Ctrl+C zum Stoppen
 ```
 
-Der Worker verbindet sich mit Camunda SaaS und abonniert folgende Tasks:
+### Verarbeitete Tasks im Camunda Worker
+
 - `receive-invoice` — Rechnung empfangen, invoiceId generieren
 - `grpc-save-invoice` — Metadaten per gRPC speichern
 - `rabbitmq-payment` — Zahlungsauftrag an RabbitMQ senden
 - `archive-invoice` — Rechnung archivieren und loggen
 
-### Schritt 3 — Prozess per E-Mail triggern (separates Terminal)
+### Schritt 2 — Prozess per E-Mail triggern (separates Terminal)
 
 ```powershell
 npm run trigger:email
@@ -58,26 +70,35 @@ node sprint4/trigger-from-email.js "lieferant@beispiel.de" "Rechnung April 2026"
 
 Startet eine neue Prozessinstanz in Camunda. Danach erscheint automatisch die erste Aufgabe im Tasklist.
 
-### Schritt 4 — Prozess im Browser bearbeiten
+### Schritt 3 — Prozess im Browser bearbeiten
 
 | Tool | URL |
 |---|---|
 | **Tasklist** (User Tasks ausfuellen) | https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
 | **Operate** (Prozess live verfolgen) | https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
 
-### Schritt 5 — Stoppen
+### Schritt 4 — Stoppen
 
 ```powershell
 npm run stop:servers
-# Camunda Worker: Strg+C im entsprechenden Terminal
+# oder direkt:
+powershell -ExecutionPolicy Bypass -File .\Stop-Server.ps1
 ```
+
+Stoppt automatisch alle gestarteten Dienste (RabbitMQ, gRPC Service, Payment Worker, Camunda Worker).
 
 ---
 
 ## Vollstaendiger Prozessablauf
 
+### Mit automatischem Camunda Worker (empfohlen):
+
 ```
-[Terminal 3] npm run trigger:email
+[Terminal 1] npm run start:servers -- -IncludeCamundaWorker
+        │
+        │  RabbitMQ + gRPC + Payment Worker + Camunda Worker werden gestartet
+        ▼
+[Terminal 2] npm run trigger:email
         │
         │  Camunda SaaS startet Prozessinstanz (Process_11wgywq)
         ▼
@@ -129,15 +150,28 @@ npm run stop:servers
         END: "Rechnung verarbeitet"
 ```
 
+### Mit manueller Kontrolle (separates Terminal):
+
+```
+[Terminal 1] npm run start:servers
+[Terminal 2] npm run start:camunda-worker
+[Terminal 3] npm run trigger:email
+        │
+        │  ... (Rest identisch wie oben)
+```
+
+Stoppen mit `npm run stop:servers` und Ctrl+C im Camunda Worker Terminal.
+
 ---
 
 ## npm Scripts Uebersicht
 
 | Befehl | Beschreibung |
 |---|---|
-| `npm run start:servers` | RabbitMQ + gRPC + Payment Worker starten |
-| `npm run stop:servers` | Alle lokalen Server stoppen |
-| `npm run start:camunda-worker` | Camunda External Task Worker starten |
+| `npm run start:servers` | RabbitMQ + gRPC + Payment Worker starten (Basis) |
+| `npm run start:servers -- -IncludeCamundaWorker` | RabbitMQ + gRPC + Payment Worker + Camunda Worker starten |
+| `npm run stop:servers` | Alle gestarteten Server stoppen (gRPC, Payment Worker, RabbitMQ, Camunda Worker) |
+| `npm run start:camunda-worker` | Camunda External Task Worker starten (separates Terminal, für manuelle Kontrolle) |
 | `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten |
 | `npm run start:workflow` | Sprint-3 Workflow Engine starten (Port 3001) |
 | `npm run check:grpc` | gRPC Verbindung testen |
