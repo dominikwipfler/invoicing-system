@@ -61,7 +61,7 @@ function Get-ConsoleWidth {
   }
 }
 
-function Normalize-LineForBox {
+function Format-LineForBox {
   param(
     [string]$Line,
     [int]$MaxInnerWidth
@@ -100,7 +100,7 @@ function Write-Box {
 
   $safeLines = @()
   foreach ($line in $Lines) {
-    $safeLines += Normalize-LineForBox -Line $line -MaxInnerWidth $maxInnerWidth
+    $safeLines += Format-LineForBox -Line $line -MaxInnerWidth $maxInnerWidth
   }
 
   $innerWidth = ($safeLines | Measure-Object -Property Length -Maximum).Maximum
@@ -206,13 +206,34 @@ function Start-RabbitMq {
   if (-not $NoWait) {
     Write-Info 'Warte auf RabbitMQ-Ports 5672 und 15672...'
     $amqpReady = Test-TcpPort -HostName '127.0.0.1' -Port 5672 -TimeoutSeconds 30
-    $uiReady = Test-TcpPort -HostName '127.0.0.1' -Port 15672 -TimeoutSeconds 30
+    $uiReady   = Test-TcpPort -HostName '127.0.0.1' -Port 15672 -TimeoutSeconds 30
 
     if ($amqpReady -and $uiReady) {
-      Write-Success 'RabbitMQ ist erreichbar.'
+      # Port offen reicht nicht — AMQP-Broker braucht noch etwas.
+      # Management-API Health-Check: erst OK wenn Broker wirklich bereit ist.
+      Write-Info 'Warte auf RabbitMQ Management API (AMQP-Broker bereit)...'
+      $brokerReady = $false
+      $deadline    = (Get-Date).AddSeconds(20)
+      while ((Get-Date) -lt $deadline -and -not $brokerReady) {
+        try {
+          $resp = Invoke-RestMethod `
+            -Uri 'http://localhost:15672/api/healthchecks/node' `
+            -Credential ([pscredential]::new('guest', (ConvertTo-SecureString 'guest' -AsPlainText -Force))) `
+            -Method Get `
+            -ErrorAction Stop
+          if ($resp.status -eq 'ok') { $brokerReady = $true }
+        } catch { }
+        if (-not $brokerReady) { Start-Sleep -Milliseconds 500 }
+      }
+
+      if ($brokerReady) {
+        Write-Success 'RabbitMQ AMQP-Broker ist vollstaendig bereit.'
+      } else {
+        Write-Warn 'RabbitMQ Ports sind offen, Broker-Bestaetigung ausstehend (Worker reconnectet automatisch).'
+      }
     }
     else {
-      Write-Warn 'RabbitMQ wurde gestartet, die Ports sind aber noch nicht vollständig bestätigt.'
+      Write-Warn 'RabbitMQ wurde gestartet, die Ports sind aber noch nicht vollstaendig bestaetigt.'
     }
   }
 
@@ -327,7 +348,6 @@ $runtimeServices += [ordered]@{
 }
 
 Write-Step '4/4' 'Camunda Worker starten (eigenes Fenster)'
-$camundaWorkerScript = Join-Path $scriptRoot 'sprint4/camunda-worker.js'
 $existingCamunda = Get-CimInstance Win32_Process | Where-Object {
   $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match 'sprint4[\\/]camunda-worker\.js'
 } | Select-Object -First 1
