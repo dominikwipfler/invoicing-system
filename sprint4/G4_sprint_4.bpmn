@@ -197,7 +197,7 @@
     <bpmn:userTask id="Task_ReceiveInfo" name="Info vom&#10;Lieferanten erhalten">
       <bpmn:extensionElements>
         <zeebe:userTask/>
-        <zeebe:formDefinition formId="UserTaskForm_ReceiveInfo"/>
+        <zeebe:formDefinition formId="rechnungserfassung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Request_Receive</bpmn:incoming>
       <bpmn:outgoing>Flow_ReceiveInfo_ValidateJoin</bpmn:outgoing>

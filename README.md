@@ -50,7 +50,7 @@ npm run stop:servers
                     │  grpc-save-invoice ──────────────── ├──► gRPC Service :50051
                     │  rabbitmq-payment  ──────────────── ├──► RabbitMQ :5672
                     │  archive-invoice                    │         │
-                    │  rpa-erp-entry ─────────────────── ├──► Playwright Bot
+                    │  rpa-erp-entry ─────────────────── ├──► UiPath Bot (Orchestrator API)
                     └─────────────────────────────────────┘         │
                                                                      ▼
                                                           ERP-Simulation (Browser)
@@ -93,11 +93,10 @@ npm run trigger:email
 [MANUELL] Rechnung freigeben — Manager  (Tasklist)
         │
         ▼
-[AUTO] rpa-erp-entry  ← Sprint 5: vollautomatisch per Playwright-Bot
-        Oeffnet ERP-System im Browser
-        Befuellt alle Felder mit Prozessvariablen
-        Speichert Screenshots als Audit-Trail
-        Gibt ERP-Referenznummer an Camunda zurueck
+[AUTO] rpa-erp-entry  ← Sprint 5: vollautomatisch per UiPath Bot
+        Startet UiPath Job im Orchestrator via REST API
+        UiPath Bot oeffnet ERP-System und befuellt alle Felder
+        Gibt UiPath Job-ID als ERP-Referenznummer zurueck
         │
         ▼
 [AUTO] rabbitmq-payment
@@ -268,45 +267,30 @@ Camunda URLs:
 
 ### Sprint 5 — RPA fuer ERP-Erfassung
 
-**Aufgabe:** Bot automatisiert die Dateneingabe ins ERP-System
+**Aufgabe:** UiPath Bot automatisiert die Dateneingabe ins ERP-System
 
 ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 
-#### Implementierung A — Playwright-Bot (integriert, laeuft automatisch)
+| Teilaufgabe | Umsetzung | Status |
+|---|---|---|
+| 5.1 UiPath Bot erstellen | UiPath Studio Web — App/Web Recorder | ✅ |
+| 5.2 Bot testen | Debug on cloud in Studio Web | ✅ |
+| 5.3 Unattended Bot in Orchestrator | Paket publiziert, Process angelegt (Shared Folder) | ✅ |
+| 5.3 Aufruf aus Camunda Workflow | REST API aus Camunda Worker — startet UiPath Job automatisch | ✅ |
 
-Der Playwright-Bot (`sprint5/rpa-erp-bot.js`) ist direkt in den Camunda-Worker eingebunden und ersetzt den manuellen ERP-Task vollautomatisch:
+**UiPath Bot** (`cloud.uipath.com`, Tenant `hkalshnhxm`):
+- Aufgezeichnet mit App/Web Recorder
+- Befuellt alle ERP-Felder automatisch (Rechnungsnummer, Datum, Lieferant, Betrag, MwSt.)
+- Laeuft als Unattended Process im Orchestrator (Shared Folder)
 
-1. Oeffnet das ERP-System im Browser
-2. Legt eine neue Rechnung an
-3. Befuellt alle Felder (Rechnungsnummer, Datum, Lieferant, Betrag inkl. 19% MwSt.)
-4. Speichert im ERP-System
-5. Erstellt zwei Screenshots als Audit-Trail (`sprint5/screenshots/`)
-6. Gibt die ERP-interne Referenznummer an Camunda zurueck
+**Playwright-Bot** (`sprint5/rpa-erp-bot.js`) — nur fuer isolierte Tests und Demos, laeuft nie automatisch im Camunda-Prozess:
 
-Bot testen:
 ```powershell
-# Headless (Standard)
-npm run rpa:test
-
-# Sichtbarer Browser mit Video — ideal fuer Praesentation
-npm run rpa:demo
-
-# Mit eigenen Testdaten
-$env:INV_ID="INV-001"; $env:SUPPLIER="BMW AG"; $env:AMOUNT="5000"
-node sprint5/rpa-erp-bot.js
+npm run rpa:test    # Headless
+npm run rpa:demo    # Sichtbarer Browser + Video
 ```
 
-#### Implementierung B — UiPath-Bot (Aufgabenstellung des Professors)
-
-Der Professor verlangt einen UiPath-Bot. Dieser wird separat in UiPath Studio Web erstellt und optional ueber den Camunda UiPath Connector eingebunden.
-
-**Schritt-fuer-Schritt-Anleitung:** `docs/sprint5/uipath-anleitung.md`
-
-| Teilaufgabe | Beschreibung | Status |
-|---|---|---|
-| 5.1 Bot erstellen | UiPath Studio Web → App/Web Recorder → ERP-Formular automatisieren | Anleitung vorhanden |
-| 5.2 Bot testen | Lokaler Run in Studio (F5) | Anleitung vorhanden |
-| 5.3 (optional) Camunda-Integration | UiPath Connector im BPMN konfigurieren | Anleitung vorhanden |
+**Dokumentation:** `docs/sprint5/uipath-anleitung.md`
 
 ---
 
@@ -385,13 +369,17 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 
 | Gefordert | Extra | Beschreibung |
 |---|---|---|
-| RPA-Bot befuellt ERP-Formular | | Playwright-Bot befuellt alle Felder, speichert Rechnung |
+| UiPath Bot erstellen (5.1) | | Bot in UiPath Studio Web mit App/Web Recorder aufgezeichnet |
+| Bot testen (5.2) | | Erfolgreich getestet (Debug on cloud, 11 erfolgreiche Runs) |
+| Unattended Bot in Orchestrator (5.3) | | Paket publiziert, Process `ERP-Rechnungserfassung` in Shared Folder angelegt |
+| Aufruf aus Camunda Workflow (5.3) | | Worker ruft UiPath Orchestrator REST API auf — Job startet automatisch |
+| | ✅ Playwright fuer isolierte Tests | Playwright-Bot laeuft via `npm run rpa:test/demo` — nie automatisch im Prozess |
 | | ✅ Screenshots als Audit-Trail | Zwei Screenshots pro Vorgang (vor + nach Speichern) |
 | | ✅ Demo-Modus | Sichtbarer Browser mit verlangsamter Ausfuehrung fuer Praesentation |
 | | ✅ Video-Aufnahme | Playwright zeichnet gesamte Automatisierung als `.webm` auf |
-| | ✅ ERP-Referenznummer in Camunda | ERP-interne ID wird als Prozessvariable zurueckgegeben |
+| | ✅ ERP-Referenznummer in Camunda | ERP-interne ID / UiPath Job-ID wird als Prozessvariable zurueckgegeben |
 | | ✅ Automatischer Retry | Camunda startet RPA-Task bei Fehlern 2x neu (5s Verzoegerung) |
-| | ✅ Isolierter Testlauf | Bot unabhaengig von Camunda mit eigenen Testdaten testbar |
+| | ✅ RPA-Modus-Anzeige | Worker zeigt beim Start ob UiPath korrekt konfiguriert ist |
 
 ### Infrastruktur (sprintuebergreifend)
 

@@ -30,13 +30,22 @@ async function triggerFromEmail() {
     variables:     emailVariables,
   });
 
+  const CLUSTER   = '487e2664-45fe-4a21-9e53-860eddc37e5e';
+  const REGION    = 'bru-2';
+  const key       = result.processInstanceKey;
+
   console.log('Prozessinstanz erfolgreich gestartet:');
-  console.log(`  Process Instance Key: ${result.processInstanceKey}`);
+  console.log(`  Process Instance Key: ${key}`);
   console.log(`  BPMN Process ID:      ${result.bpmnProcessId}`);
   console.log(`  Version:              ${result.version}`);
   console.log('');
-  console.log('Nächster Schritt: Aufgabe im Tasklist öffnen und Rechnungsdaten erfassen.');
-  console.log('https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e');
+  console.log('── Links ──────────────────────────────────────────────────────');
+  console.log(`  Tasklist (manuelle Aufgaben):`)
+  console.log(`  https://${REGION}.tasklist.camunda.io/${CLUSTER}`);
+  console.log('');
+  console.log(`  Operate (Prozess verfolgen — direkt zu dieser Instanz):`);
+  console.log(`  https://${REGION}.operate.camunda.io/${CLUSTER}/processes/${key}`);
+  console.log('────────────────────────────────────────────────────────────────');
 
   await zbc.close();
 }

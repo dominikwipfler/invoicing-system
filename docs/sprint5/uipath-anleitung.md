@@ -1,128 +1,75 @@
-# Sprint 5 — UiPath Anleitung
+# Sprint 5 — UiPath Dokumentation
 
-## Status
+## Was umgesetzt wurde
 
-| Aufgabe | Status |
-|---|---|
-| 5.1 UiPath Bot in Studio Web erstellt | ✅ Fertig |
-| 5.2 Bot erfolgreich getestet (Run) | ✅ Fertig |
-| Bot in Orchestrator publiziert (Publish) | ✅ Fertig |
-| External Application "Camunda" angelegt | ⏳ Fast fertig — Scope noch ausstehend |
-| Process in Orchestrator anlegen | ❌ Noch offen |
-| 5.3 Camunda UiPath Connector konfigurieren | ❌ Noch offen |
+### 5.1 — UiPath Bot erstellt (Pflicht)
 
----
+Bot in UiPath Studio Web erstellt:
+- Tool: UiPath Studio Web (`cloud.uipath.com`)
+- Tenant: `hkalshnhxm` / `DefaultTenant`
+- Methode: App/Web Recorder — ERP-Formular aufgezeichnet
+- ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 
-## Was noch zu tun ist — in dieser Reihenfolge
+Aufgezeichnete Schritte:
+1. Klick auf "Neue Rechnung"
+2. Rechnungsnummer, Datum, Lieferant, Lieferantennummer, Zahlungsbedingungen, Notizen
+3. Position hinzufügen mit Beschreibung, Menge, Einheit, Preis, 19% MwSt.
+4. Rechnung speichern
 
----
+### 5.2 — Bot getestet (Pflicht)
 
-### SCHRITT 1 — External Application fertigstellen (5 Minuten)
+- Test in Studio Web über "Run" (Debug on cloud)
+- Alle Schritte erfolgreich (`Successful` in Output-Panel)
+- 11 erfolgreiche Runs in Orchestrator nachweisbar
 
-**Ziel:** Client ID + Client Secret bekommen, damit Camunda UiPath aufrufen darf.
+### 5.3 — Einbindung in Camunda (Optional)
 
-1. Öffne: `https://cloud.uipath.com/hkalshnhxm/portal_/admin/external-apps`
-2. Klicke auf die Application **"Camunda"** (die du vorhin angelegt hast)
-3. Klicke auf **"Add Scopes"** oder **"Edit"**
-4. In der Scope-Liste: klicke auf **"Orchestrator API Access"**
-5. Klicke **"Update"** oder **"Save"**
-6. Klicke unten auf **"Add"** → die Application wird gespeichert
-7. Du siehst jetzt:
-   - **Client ID** — kopiere sie
-   - **Client Secret** — kopiere ihn sofort (wird nur einmal angezeigt!)
-8. Gib mir Client ID und Client Secret
+**Bereitstellung als Unattended Bot in UiPath Orchestrator:**
+- Paket publiziert in Orchestrator (Shared Folder)
+- Process angelegt: `ERP-Rechnungserfassung`
+- Folder ID: `285336`
+- External Application für API-Zugriff erstellt (`Camunda`, Scope: Orchestrator API Access)
 
----
+**Aufruf aus dem Camunda Workflow:**
+- Implementierung: UiPath Orchestrator REST API direkt aus dem Camunda Worker
+- Endpoint: `https://cloud.uipath.com/{org}/{tenant}/orchestrator_/odata/Jobs/StartJobs`
+- Authentifizierung: OAuth2 Client Credentials (`UIPATH_CLIENT_ID` + `UIPATH_CLIENT_SECRET`)
+- Bei Prozessvariable `rpa-erp-entry` startet der Worker automatisch den UiPath Job
+- Fallback auf Playwright wenn UiPath nicht konfiguriert
 
-### SCHRITT 2 — Process in Orchestrator anlegen (3 Minuten)
-
-**Ziel:** Den publizierten Bot als ausführbaren Process registrieren.
-
-1. Öffne: `https://cloud.uipath.com/hkalshnhxm/DefaultTenant/orchestrator_`
-2. Oben in der Navigation: klicke **"Automations"**
-3. Im Dropdown: klicke **"Processes"**
-4. Klicke **"+"** (oben rechts)
-5. Bei **"Package"**: wähle **"RPA Workflow"** aus der Liste
-6. Name: `ERP-Rechnungserfassung`
-7. Klicke **"Create"**
-
----
-
-### SCHRITT 3 — Camunda Secrets anlegen (3 Minuten)
-
-**Ziel:** Client ID und Secret sicher in Camunda speichern (nicht im Code).
-
-1. Öffne: `https://console.cloud.camunda.io`
-2. Klicke auf dein Cluster (das mit `bru-2`)
-3. Linkes Menü: **"Secrets"**
-4. Klicke **"+ Create"** — lege diese zwei Secrets an:
-
-| Secret Name | Wert |
-|---|---|
-| `UIPATH_CLIENT_ID` | deine Client ID aus Schritt 1 |
-| `UIPATH_CLIENT_SECRET` | dein Client Secret aus Schritt 1 |
-
----
-
-### SCHRITT 4 — BPMN in Camunda Web Modeler anpassen (10 Minuten)
-
-**Ziel:** Den ERP-Task von Playwright-Worker auf UiPath Connector umstellen.
-
-1. Öffne: `https://modeler.camunda.io`
-2. Öffne dein Projekt → öffne `G4_sprint_4.bpmn`
-3. Klicke auf den Task **"Rechnungsdaten ins ERP System eingeben (RPA)"**
-4. Rechts im Panel: klicke auf das **Schraubenschlüssel-Icon** oder **"Change type"**
-5. Suche nach **"UiPath"** in der Connector-Liste
-6. Wähle **"UiPath Outbound Connector"**
-7. Konfiguriere die Felder:
-
-| Feld | Wert |
-|---|---|
-| Orchestrator URL | `https://cloud.uipath.com` |
-| Organization | `hkalshnhxm` |
-| Tenant | `DefaultTenant` |
-| Client ID | `{{secrets.UIPATH_CLIENT_ID}}` |
-| Client Secret | `{{secrets.UIPATH_CLIENT_SECRET}}` |
-| Folder Path | `My Workspace` |
-| Process Name | `ERP-Rechnungserfassung` |
-| Input Arguments | (siehe unten) |
-
-Input Arguments (JSON):
-```json
-{
-  "invoiceNumber": "{{invoiceNumber}}",
-  "invoiceDate": "{{invoiceDate}}",
-  "supplierName": "{{supplierName}}",
-  "invoiceId": "{{invoiceId}}",
-  "amountEuro": "{{amountEuro}}"
-}
+**Konfiguration in `.env`:**
+```
+UIPATH_CLIENT_ID=...
+UIPATH_CLIENT_SECRET=...
+UIPATH_ORGANIZATION=hkalshnhxm
+UIPATH_TENANT=DefaultTenant
+UIPATH_FOLDER=Shared
+UIPATH_FOLDER_ID=285336
+UIPATH_PROCESS_NAME=ERP-Rechnungserfassung
 ```
 
-8. Klicke **"Deploy"** → BPMN wird in Camunda deployed
+---
+
+## RPA-Modus prüfen
+
+Beim Start des Camunda Workers erscheint:
+
+```
+[INFO] UiPath Orchestrator konfiguriert – Bot wird über API gestartet
+RPA-Modus: UiPath Orchestrator API
+```
+
+Oder bei fehlendem UiPath:
+
+```
+[INFO] UiPath nicht konfiguriert – Playwright-Fallback aktiv
+RPA-Modus: Playwright
+```
 
 ---
 
-### SCHRITT 5 — Testen
+## Bot erneut in Studio Web öffnen
 
-1. `npm run trigger:email` ausführen
-2. In Camunda Tasklist die manuellen Schritte durchführen
-3. Wenn der ERP-Task erreicht wird → UiPath Orchestrator startet den Bot automatisch
-4. Bot füllt das ERP-Formular aus
-5. Prozess läuft weiter bis zum Ende
-
----
-
-## Für mich — was ich vorbereitet habe
-
-- `.env.example` mit UiPath-Credential-Platzhaltern aktualisiert
-- Sobald du mir Client ID + Secret gibst und Schritt 3 (Camunda Secrets) erledigt ist, kann ich die BPMN-Datei lokal vorbereiten
-
----
-
-## Kurzfassung — deine To-Do-Liste
-
-- [ ] Schritt 1: External App → Scope hinzufügen → Client ID + Secret kopieren → mir geben
-- [ ] Schritt 2: Orchestrator → Automations → Processes → Process anlegen
-- [ ] Schritt 3: Camunda Console → Secrets → UIPATH_CLIENT_ID + UIPATH_CLIENT_SECRET
-- [ ] Schritt 4: Web Modeler → ERP-Task → UiPath Connector → Deploy
-- [ ] Schritt 5: Testen mit `npm run trigger:email`
+1. `https://cloud.uipath.com/hkalshnhxm/studio_/` öffnen
+2. Projekt `RPA Workflow` auswählen
+3. Bot bearbeiten oder erneut ausführen
