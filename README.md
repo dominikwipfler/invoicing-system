@@ -270,9 +270,13 @@ Camunda URLs:
 
 **Aufgabe:** Bot automatisiert die Dateneingabe ins ERP-System
 
-Der Playwright-Bot (`sprint5/rpa-erp-bot.js`) ersetzt den manuellen ERP-Task:
+ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 
-1. Oeffnet `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
+#### Implementierung A — Playwright-Bot (integriert, laeuft automatisch)
+
+Der Playwright-Bot (`sprint5/rpa-erp-bot.js`) ist direkt in den Camunda-Worker eingebunden und ersetzt den manuellen ERP-Task vollautomatisch:
+
+1. Oeffnet das ERP-System im Browser
 2. Legt eine neue Rechnung an
 3. Befuellt alle Felder (Rechnungsnummer, Datum, Lieferant, Betrag inkl. 19% MwSt.)
 4. Speichert im ERP-System
@@ -291,6 +295,18 @@ npm run rpa:demo
 $env:INV_ID="INV-001"; $env:SUPPLIER="BMW AG"; $env:AMOUNT="5000"
 node sprint5/rpa-erp-bot.js
 ```
+
+#### Implementierung B — UiPath-Bot (Aufgabenstellung des Professors)
+
+Der Professor verlangt einen UiPath-Bot. Dieser wird separat in UiPath Studio Web erstellt und optional ueber den Camunda UiPath Connector eingebunden.
+
+**Schritt-fuer-Schritt-Anleitung:** `docs/sprint5/uipath-anleitung.md`
+
+| Teilaufgabe | Beschreibung | Status |
+|---|---|---|
+| 5.1 Bot erstellen | UiPath Studio Web → App/Web Recorder → ERP-Formular automatisieren | Anleitung vorhanden |
+| 5.2 Bot testen | Lokaler Run in Studio (F5) | Anleitung vorhanden |
+| 5.3 (optional) Camunda-Integration | UiPath Connector im BPMN konfigurieren | Anleitung vorhanden |
 
 ---
 
