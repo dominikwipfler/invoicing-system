@@ -7,66 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 
-// ── UiPath Orchestrator API (Sprint 5.3) ──────────────────────────────────────
-const UIPATH_CLIENT_ID   = process.env.UIPATH_CLIENT_ID;
-const UIPATH_CLIENT_SECRET = process.env.UIPATH_CLIENT_SECRET;
-const UIPATH_ORGANIZATION  = process.env.UIPATH_ORGANIZATION || 'hkalshnhxm';
-const UIPATH_TENANT        = process.env.UIPATH_TENANT       || 'DefaultTenant';
-const UIPATH_FOLDER_ID     = process.env.UIPATH_FOLDER_ID    || '285336';
-const UIPATH_PROCESS_NAME  = process.env.UIPATH_PROCESS_NAME || 'ERP-Rechnungserfassung';
-const UIPATH_RELEASE_KEY   = process.env.UIPATH_RELEASE_KEY;
-
-async function getUiPathToken() {
-  const res = await fetch(`https://cloud.uipath.com/${UIPATH_ORGANIZATION}/identity_/connect/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type:    'client_credentials',
-      client_id:     UIPATH_CLIENT_ID,
-      client_secret: UIPATH_CLIENT_SECRET,
-    }),
-  });
-  if (!res.ok) throw new Error(`UiPath Token-Fehler: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  return data.access_token;
-}
-
-async function startUiPathJob(token, inputArguments) {
-  const url = `https://cloud.uipath.com/${UIPATH_ORGANIZATION}/${UIPATH_TENANT}/orchestrator_/odata/Jobs/UiPath.Server.Configuration.OData.StartJobs`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization':              `Bearer ${token}`,
-      'Content-Type':               'application/json',
-      'X-UIPATH-OrganizationUnitId': UIPATH_FOLDER_ID,
-    },
-    body: JSON.stringify({
-      startInfo: {
-        ReleaseKey:      UIPATH_RELEASE_KEY,
-        Strategy:        'Specific',
-        RobotIds:        [239456],
-        InputArguments:  JSON.stringify(inputArguments),
-      },
-    }),
-  });
-  if (!res.ok) throw new Error(`UiPath Job-Start-Fehler: ${res.status} ${await res.text()}`);
-  return await res.json();
-}
-
-async function callUiPathBot(invoiceData) {
-  const token  = await getUiPathToken();
-  const result = await startUiPathJob(token, invoiceData);
-  const jobId  = result?.value?.[0]?.Id;
-  console.log(`[uipath] Job gestartet — ID: ${jobId}`);
-  return jobId || 'unknown';
-}
-
-const uiPathConfigured = !!(UIPATH_CLIENT_ID && UIPATH_CLIENT_SECRET);
-if (uiPathConfigured) {
-  console.log('[INFO] UiPath Orchestrator konfiguriert – Bot wird über API gestartet');
-} else {
-  console.log('[INFO] UiPath nicht konfiguriert – Playwright-Fallback aktiv');
-}
+const { fillErpForm } = require('../rpa/rpa-erp-bot');
 
 // ── Konfiguration ─────────────────────────────────────────────────────────────
 const GRPC_ADDRESS  = process.env.GRPC_ADDRESS  || '127.0.0.1:50051';
@@ -218,38 +159,30 @@ zbc.createWorker({
   },
 });
 
-// 5. ERP-Erfassung per RPA (Sprint 5) — ausschliesslich UiPath Orchestrator
-//    Playwright laeuft nur direkt via: npm run rpa:test / npm run rpa:demo
+// 5. ERP-Erfassung per Playwright RPA
 zbc.createWorker({
   taskType: 'rpa-erp-entry',
   taskHandler: async (job) => {
     const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate } = job.variables;
-    console.log(`[rpa-erp-entry] Starte UiPath Bot für Rechnung ${invoiceId}`);
+    console.log(`[rpa-erp-entry] Starte Playwright Bot für Rechnung ${invoiceId}`);
     logEvent(invoiceId, 'RPA ERP Entry Started', 'camunda-worker');
 
-    if (!uiPathConfigured) {
-      const msg = 'UiPath nicht konfiguriert — UIPATH_CLIENT_ID und UIPATH_CLIENT_SECRET in .env prüfen';
-      console.error(`[rpa-erp-entry] ${msg}`);
-      logEvent(invoiceId, 'RPA ERP Entry Failed', 'camunda-worker');
-      return job.fail(msg, { retries: 0 });
-    }
-
     try {
-      const jobId = await callUiPathBot({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate });
-      console.log(`[rpa-erp-entry] UiPath Job gestartet: ${jobId}`);
-      logEvent(invoiceId, 'RPA ERP Entry via UiPath', 'camunda-worker');
+      const { erpReferenzNummer } = await fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate });
+      console.log(`[rpa-erp-entry] ERP-Referenz: ${erpReferenzNummer}`);
+      logEvent(invoiceId, 'RPA ERP Entry via Playwright', 'camunda-worker');
       return job.complete({
-        erpReferenzNummer: `UIPATH-${jobId}`,
+        erpReferenzNummer,
         erpErfasst: true,
-        rpaMode: 'uipath',
+        rpaMode: 'playwright',
       });
     } catch (err) {
       console.error(`[rpa-erp-entry] Fehler: ${err.message}`);
       logEvent(invoiceId, 'RPA ERP Entry Failed', 'camunda-worker');
-      return job.fail(err.message, { retries: 2, retryBackOff: 5000 });
+      return job.error('RPA_ERROR', `Playwright Fehler: ${err.message}`);
     }
   },
 });
 
-console.log(`Camunda Worker läuft – abonnierte Tasks: receive-invoice, grpc-save-invoice, rabbitmq-payment, archive-invoice, rpa-erp-entry`);
-console.log(`RPA-Modus: ${uiPathConfigured ? 'UiPath Orchestrator API' : 'NICHT KONFIGURIERT — .env prüfen'}`);
+console.log('Camunda Worker läuft – abonnierte Tasks: receive-invoice, grpc-save-invoice, rabbitmq-payment, archive-invoice, rpa-erp-entry');
+console.log('RPA-Modus: Playwright (direkt, kein UiPath)');
