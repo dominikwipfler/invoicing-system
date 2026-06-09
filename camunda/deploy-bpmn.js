@@ -7,7 +7,7 @@ async function deploy() {
   const c8  = new Camunda8();
   const zbc = c8.getZeebeGrpcApiClient();
 
-  const bpmnFile  = path.resolve(__dirname, 'G4_sprint_4.bpmn');
+  const bpmnFile  = path.resolve(__dirname, 'invoice-process.bpmn');
   const formsDir  = path.resolve(__dirname, 'forms');
 
   console.log('Deploye BPMN + Formulare...');

@@ -349,7 +349,7 @@ $runtimeServices += [ordered]@{
 
 Write-Step '4/4' 'Camunda Worker starten (eigenes Fenster)'
 $existingCamunda = Get-CimInstance Win32_Process | Where-Object {
-  $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match 'sprint4[\\/]camunda-worker\.js'
+  $_.Name -match '^node(\.exe)?$' -and $_.CommandLine -match 'camunda[\\/]camunda-worker\.js'
 } | Select-Object -First 1
 
 if ($existingCamunda) {
@@ -357,7 +357,7 @@ if ($existingCamunda) {
   $services += [pscustomobject]@{ Name = 'Camunda Worker'; Status = 'bereits aktiv'; ProcessId = [int]$existingCamunda.ProcessId }
 } else {
   Write-Info 'Camunda Worker wird in neuem Fenster gestartet...'
-  Start-Process pwsh -ArgumentList '-NoExit', '-Command', "cd '$scriptRoot'; node sprint4/camunda-worker.js" -WindowStyle Normal
+  Start-Process pwsh -ArgumentList '-NoExit', '-Command', "cd '$scriptRoot'; node camunda/camunda-worker.js" -WindowStyle Normal
   Write-Success 'Camunda Worker gestartet (separates Fenster).'
   $services += [pscustomobject]@{ Name = 'Camunda Worker'; Status = 'gestartet (separates Fenster)' }
 }

@@ -33,7 +33,7 @@ npm run rpa:demo   # Sichtbarer Browser + Videoaufnahme (fuer Praesentation)
 **BPMN neu deployen** (nach Aenderungen am lokalen BPMN oder Formularen):
 
 ```powershell
-node sprint4/deploy-bpmn.js
+node camunda/deploy-bpmn.js
 ```
 
 ---
@@ -66,6 +66,7 @@ node sprint4/deploy-bpmn.js
                     │  archive-invoice                    │         │
                     │  rpa-erp-entry ─────────────────── ├──► UiPath Bot (Orchestrator API)
                     └─────────────────────────────────────┘         │
+
                                                                      ▼
                                                           ERP-Simulation (Browser)
 ```
@@ -144,15 +145,15 @@ invoicing-system/
 │   └── workflow-client.js
 ├── workflow-engine/                # Sprint 3: Eigene Workflow Engine (Port 3001)
 │   └── server.js
-├── sprint4/                        # Sprint 4+5: Camunda-Implementierung
-│   ├── G4_sprint_4.bpmn            # BPMN-Prozess (deployed in Camunda)
+├── camunda/                        # Sprint 4+5: Camunda-Implementierung
+│   ├── invoice-process.bpmn        # BPMN-Prozess (deployed in Camunda)
 │   ├── camunda-worker.js           # External Task Worker (5 Tasks)
 │   ├── trigger-from-email.js       # E-Mail-Simulation: Prozess starten
 │   └── forms/
 │       ├── rechnungserfassung.form
 │       ├── freigabe.form
 │       └── erp-bestaetigung.form
-├── sprint5/                        # Sprint 5: RPA
+├── rpa/                            # Sprint 5: RPA
 │   ├── rpa-erp-bot.js              # Playwright-Bot
 │   └── screenshots/                # Audit-Trail (nicht in Git)
 ├── docs/
@@ -262,12 +263,12 @@ GET  /workflows
 
 | Artefakt | Datei | Beschreibung |
 |---|---|---|
-| BPMN Prozess | `sprint4/G4_sprint_4.bpmn` | Deployed in Camunda SaaS als `Process_Invoice` |
-| Camunda Worker | `sprint4/camunda-worker.js` | Automatisiert alle Service Tasks |
-| E-Mail-Trigger | `sprint4/trigger-from-email.js` | Startet neuen Prozess |
-| Formular Erfassung | `sprint4/forms/rechnungserfassung.form` | Manuelle Dateneingabe |
-| Formular Pruefung | `sprint4/forms/freigabe.form` | Validierung und Freigabe |
-| Formular ERP | `sprint4/forms/erp-bestaetigung.form` | ERP-Bestaetigung (Sprint 4) |
+| BPMN Prozess | `camunda/invoice-process.bpmn` | Deployed in Camunda SaaS als `Process_Invoice` |
+| Camunda Worker | `camunda/camunda-worker.js` | Automatisiert alle Service Tasks |
+| E-Mail-Trigger | `camunda/trigger-from-email.js` | Startet neuen Prozess |
+| Formular Erfassung | `camunda/forms/rechnungserfassung.form` | Manuelle Dateneingabe |
+| Formular Pruefung | `camunda/forms/freigabe.form` | Validierung und Freigabe |
+| Formular ERP | `camunda/forms/erp-bestaetigung.form` | ERP-Bestaetigung (Sprint 4) |
 
 Camunda URLs:
 
@@ -305,7 +306,7 @@ npm run rpa:test    # Headless
 npm run rpa:demo    # Sichtbarer Browser + Video
 ```
 
-**Dokumentation:** `docs/sprint5/uipath-anleitung.md`
+**Dokumentation:** `docs/sprint5/erklaerung-sprint5.md`
 
 ---
 

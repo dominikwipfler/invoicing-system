@@ -21,7 +21,7 @@ In Sprint 4 wurde die bisher selbst entwickelte Workflow-Engine durch **Camunda 
 
 ## Was wir umgesetzt haben
 
-### 1. BPMN-Prozessmodell (`sprint4/G4_sprint_4.bpmn`)
+### 1. BPMN-Prozessmodell (`camunda/invoice-process.bpmn`)
 
 Der vollständige Rechnungsprozess wurde als BPMN 2.0-Modell für Camunda 8 neu modelliert:
 
@@ -37,7 +37,7 @@ Der vollständige Rechnungsprozess wurde als BPMN 2.0-Modell für Camunda 8 neu 
   - ERP-Bestätigung (Formular: `erp-bestaetigung.form`)
 - **Gateway**: Datenvollständigkeit prüfen — bei unvollständigen Daten zurück zur Erfassung
 
-### 2. Camunda Formulare (`sprint4/forms/`)
+### 2. Camunda Formulare (`camunda/forms/`)
 
 Drei JSON-basierte Camunda-Formulare erstellt, die direkt an die User Tasks im BPMN gebunden sind:
 
@@ -47,15 +47,15 @@ Drei JSON-basierte Camunda-Formulare erstellt, die direkt an die User Tasks im B
 | `freigabe.form` | Freigabe oder Ablehnung der Rechnung durch Sachbearbeiter |
 | `erp-bestaetigung.form` | Bestätigung der ERP-Erfassung nach automatischer Verarbeitung |
 
-### 3. E-Mail-Trigger (`sprint4/trigger-from-email.js`)
+### 3. E-Mail-Trigger (`camunda/trigger-from-email.js`)
 
 Skript zum Starten einer neuen Prozessinstanz in Camunda 8 per Kommandozeile — simuliert den Eingang einer Lieferantenrechnung per E-Mail. Übergibt `emailFrom`, `emailSubject` und `emailReceivedAt` als Prozessvariablen.
 
 ```powershell
-node sprint4/trigger-from-email.js lieferant@beispiel.de "Rechnung RG-2026-042"
+node camunda/trigger-from-email.js lieferant@beispiel.de "Rechnung RG-2026-042"
 ```
 
-### 4. Camunda Worker (`sprint4/camunda-worker.js`)
+### 4. Camunda Worker (`camunda/camunda-worker.js`)
 
 Der Worker abonniert alle Service-Task-Typen des BPMN-Prozesses und verbindet Camunda mit den bestehenden Infrastrukturkomponenten:
 
@@ -65,8 +65,8 @@ Der Worker abonniert alle Service-Task-Typen des BPMN-Prozesses und verbindet Ca
 
 ### 5. Deploy- und Hilfsskripte
 
-- `sprint4/deploy-bpmn.js` — deployed das BPMN-Modell direkt in den Camunda-Cluster
-- `sprint4/cancel-incidents.js` — bricht fehlerhafte Prozessinstanzen im Camunda Operate ab
+- `camunda/deploy-bpmn.js` — deployed das BPMN-Modell direkt in den Camunda-Cluster
+- `camunda/cancel-incidents.js` — bricht fehlerhafte Prozessinstanzen im Camunda Operate ab
 
 ---
 

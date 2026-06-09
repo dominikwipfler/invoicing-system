@@ -75,7 +75,7 @@ UIPATH_PROCESS_NAME=ERP-Rechnungserfassung
 RPA-Modus: UiPath Orchestrator API
 ```
 
-### Playwright-Bot (`sprint5/rpa-erp-bot.js`) — nur für Tests und Demos
+### Playwright-Bot (`rpa/rpa-erp-bot.js`) — nur für Tests und Demos
 
 Als Fallback und für isolierte Demonstrations- und Testzwecke existiert ein Playwright-Bot. Dieser läuft **nie automatisch im Camunda-Prozess**, sondern ausschließlich über npm-Scripts:
 
@@ -106,7 +106,7 @@ npm run rpa:demo   # Sichtbarer Browser + Videoaufnahme (für Präsentation)
 | Aufruf aus Camunda Workflow (5.3) | | Worker ruft UiPath Orchestrator REST API auf (OAuth2 + ReleaseKey) |
 | | ⚠️ Lizenzlimitierung | HKA-Bildungslizenz unterstützt keinen API-basierten Unattended-Start; manueller Start in Studio Web funktioniert |
 | | ✅ Playwright für isolierte Tests | Playwright-Bot läuft via `npm run rpa:test/demo` — nie automatisch im Prozess |
-| | ✅ Screenshots als Audit-Trail | Zwei Screenshots pro Vorgang (vor + nach Speichern) in `sprint5/screenshots/` |
+| | ✅ Screenshots als Audit-Trail | Zwei Screenshots pro Vorgang (vor + nach Speichern) in `rpa/screenshots/` |
 | | ✅ Demo-Modus | Sichtbarer Browser mit verlangsamter Ausführung für Präsentation |
 | | ✅ Video-Aufnahme | Playwright zeichnet gesamte Automatisierung als `.webm` auf |
 | | ✅ ERP-Referenznummer in Camunda | UiPath Job-ID wird als Prozessvariable `erpReferenzNummer` zurückgegeben |
