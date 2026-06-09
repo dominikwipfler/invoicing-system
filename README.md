@@ -12,6 +12,7 @@ Hochschule Karlruhe — Projekt Digitalisierung von Geschaeftsprozessen (SS 2026
 npm run start:servers
 
 # 2. Neuen Prozess per E-Mail-Simulation starten
+# → Gibt direkten Link zur Prozessinstanz in Camunda Operate aus
 npm run trigger:email
 
 # 3. Manuelle Tasks im Browser bearbeiten
@@ -20,6 +21,19 @@ npm run trigger:email
 
 # 4. Alles stoppen
 npm run stop:servers
+```
+
+**Playwright-Bot isoliert ausfuehren** (nur fuer Tests/Demos — laeuft nie automatisch im Prozess):
+
+```powershell
+npm run rpa:test   # Headless (kein Browserfenster)
+npm run rpa:demo   # Sichtbarer Browser + Videoaufnahme (fuer Praesentation)
+```
+
+**BPMN neu deployen** (nach Aenderungen am lokalen BPMN oder Formularen):
+
+```powershell
+node sprint4/deploy-bpmn.js
 ```
 
 ---
@@ -40,7 +54,7 @@ npm run stop:servers
 ```
                     ┌─────────────────────────────────────┐
                     │         Camunda 8 SaaS              │
-                    │   (Process_11wgywq, bru-2)          │
+                    │   (Process_Invoice, bru-2)          │
                     └──────────────┬──────────────────────┘
                                    │ gRPC (Port 26500)
                     ┌──────────────▼──────────────────────┐
@@ -248,7 +262,7 @@ GET  /workflows
 
 | Artefakt | Datei | Beschreibung |
 |---|---|---|
-| BPMN Prozess | `sprint4/G4_sprint_4.bpmn` | Deployed in Camunda SaaS als `Process_11wgywq` |
+| BPMN Prozess | `sprint4/G4_sprint_4.bpmn` | Deployed in Camunda SaaS als `Process_Invoice` |
 | Camunda Worker | `sprint4/camunda-worker.js` | Automatisiert alle Service Tasks |
 | E-Mail-Trigger | `sprint4/trigger-from-email.js` | Startet neuen Prozess |
 | Formular Erfassung | `sprint4/forms/rechnungserfassung.form` | Manuelle Dateneingabe |
@@ -274,9 +288,10 @@ ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 | Teilaufgabe | Umsetzung | Status |
 |---|---|---|
 | 5.1 UiPath Bot erstellen | UiPath Studio Web — App/Web Recorder | ✅ |
-| 5.2 Bot testen | Debug on cloud in Studio Web | ✅ |
-| 5.3 Unattended Bot in Orchestrator | Paket publiziert, Process angelegt (Shared Folder) | ✅ |
-| 5.3 Aufruf aus Camunda Workflow | REST API aus Camunda Worker — startet UiPath Job automatisch | ✅ |
+| 5.2 Bot testen | Debug on cloud in Studio Web (11+ erfolgreiche Runs) | ✅ |
+| 5.3 Unattended Bot in Orchestrator | Paket publiziert, Process `ERP-Rechnungserfassung` in Solution Folder angelegt | ✅ |
+| 5.3 REST API Integration in Camunda | OAuth2 + Orchestrator API vollstaendig implementiert im Camunda Worker | ✅ |
+| 5.3 Vollautomatischer API-Trigger | Nicht moeglich — HKA-Bildungslizenz enthaelt keine Unattended Robot Ausfuehrung via API | ⚠️ |
 
 **UiPath Bot** (`cloud.uipath.com`, Tenant `hkalshnhxm`):
 - Aufgezeichnet mit App/Web Recorder
@@ -372,7 +387,8 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 | UiPath Bot erstellen (5.1) | | Bot in UiPath Studio Web mit App/Web Recorder aufgezeichnet |
 | Bot testen (5.2) | | Erfolgreich getestet (Debug on cloud, 11 erfolgreiche Runs) |
 | Unattended Bot in Orchestrator (5.3) | | Paket publiziert, Process `ERP-Rechnungserfassung` in Shared Folder angelegt |
-| Aufruf aus Camunda Workflow (5.3) | | Worker ruft UiPath Orchestrator REST API auf — Job startet automatisch |
+| Aufruf aus Camunda Workflow (5.3) | | Worker ruft UiPath Orchestrator REST API auf (OAuth2 + ReleaseKey) |
+| | ⚠️ Lizenzlimitierung | HKA-Bildungslizenz unterstuetzt keinen API-basierten Unattended-Start; manueller Start in Studio Web funktioniert |
 | | ✅ Playwright fuer isolierte Tests | Playwright-Bot laeuft via `npm run rpa:test/demo` — nie automatisch im Prozess |
 | | ✅ Screenshots als Audit-Trail | Zwei Screenshots pro Vorgang (vor + nach Speichern) |
 | | ✅ Demo-Modus | Sichtbarer Browser mit verlangsamter Ausfuehrung fuer Praesentation |
