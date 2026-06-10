@@ -342,3 +342,30 @@ INV-1781008070815,Invoice Email Received,2026-06-09T12:27:50.816Z,camunda-worker
 INV-1781008070815,gRPC Save Success,2026-06-09T12:28:55.712Z,camunda-worker
 INV-1781008070815,RPA ERP Entry Started,2026-06-09T12:29:49.651Z,camunda-worker
 INV-1781008070815,RPA ERP Entry Failed,2026-06-09T12:29:50.875Z,camunda-worker
+INV-1781105678802,Invoice Email Received,2026-06-10T15:34:38.804Z,camunda-worker
+INV-1781105678802,AI Extraction Started,2026-06-10T15:34:38.976Z,ai-agent
+INV-1781105678802,AI Extraction Failed,2026-06-10T15:34:39.424Z,ai-agent
+INV-1781105840917,Invoice Email Received,2026-06-10T15:37:20.919Z,camunda-worker
+INV-1781105840917,AI Extraction Started,2026-06-10T15:37:21.007Z,ai-agent
+INV-1781105840917,AI Extraction Done (confidence=0.92),2026-06-10T15:37:21.010Z,ai-agent
+INV-1781105840917,gRPC Save Success,2026-06-10T15:37:21.143Z,camunda-worker
+INV-1781105840917,RPA ERP Entry Started,2026-06-10T15:38:24.359Z,camunda-worker
+INV-1781105840917,RPA ERP Entry via Playwright,2026-06-10T15:38:29.640Z,camunda-worker
+INV-1781105840917,Payment Sent to RabbitMQ,2026-06-10T15:38:29.819Z,camunda-worker
+INV-1781105840917,Invoice Archived,2026-06-10T15:38:29.880Z,camunda-worker
+INV-1781106108513,Invoice Email Received,2026-06-10T15:41:48.514Z,camunda-worker
+INV-1781106108513,AI Extraction Started,2026-06-10T15:41:48.695Z,ai-agent
+INV-1781106108513,AI Extraction Done (confidence=0.92),2026-06-10T15:41:48.700Z,ai-agent
+INV-1781106108513,gRPC Save Success,2026-06-10T15:41:48.799Z,camunda-worker
+INV-1781106192268,Invoice Email Received,2026-06-10T15:43:12.269Z,camunda-worker
+INV-1781106192268,AI Extraction Started,2026-06-10T15:43:12.476Z,ai-agent
+INV-1781106192268,AI Extraction Done (confidence=0.92),2026-06-10T15:43:12.482Z,ai-agent
+INV-1781106192268,gRPC Save Success,2026-06-10T15:43:12.618Z,camunda-worker
+INV-1781106442029,Invoice Email Received,2026-06-10T15:47:22.030Z,camunda-worker
+INV-1781106442029,AI Extraction Started,2026-06-10T15:47:22.157Z,ai-agent
+INV-1781106442029,AI Extraction Done (confidence=0.92),2026-06-10T15:47:22.161Z,ai-agent
+INV-1781106442029,gRPC Save Success,2026-06-10T15:47:42.927Z,camunda-worker
+INV-1781106442029,RPA ERP Entry Started,2026-06-10T15:48:27.472Z,camunda-worker
+INV-1781106442029,RPA ERP Entry via Playwright,2026-06-10T15:48:30.647Z,camunda-worker
+INV-1781106442029,Payment Sent to RabbitMQ,2026-06-10T15:48:30.802Z,camunda-worker
+INV-1781106442029,Invoice Archived,2026-06-10T15:48:30.878Z,camunda-worker

@@ -4,15 +4,17 @@ const { Camunda8 } = require('@camunda8/sdk');
 // BPMN Process ID aus Camunda Operate (Process_11wgywq = deployed Sprint 4 Prozess)
 const BPMN_PROCESS_ID = process.env.BPMN_PROCESS_ID || 'Process_11wgywq';
 
-// Simulierte E-Mail-Daten — Argumente: node trigger-from-email.js <absender> <betreff>
+// Argumente: node trigger-from-email.js <absender> <betreff> [pdf-pfad]
 const emailFrom    = process.argv[2] || 'lieferant@beispiel.de';
-const emailSubject = process.argv[3] || 'Rechnung RG-2026-042 für Lieferung Mai 2026';
+const emailSubject = process.argv[3] || 'Rechnung RE-2026-0748 von TechSolutions GmbH';
+const pdfPath      = process.argv[4] || require('path').join(__dirname, '..', 'ai-agent', 'test-invoice.pdf');
 
 const emailVariables = {
   emailFrom,
   emailSubject,
   emailReceivedAt: new Date().toISOString(),
   eingangskanal:   'email',
+  pdfPath,
 };
 
 async function triggerFromEmail() {
@@ -23,6 +25,7 @@ async function triggerFromEmail() {
   console.log(`  Von:     ${emailFrom}`);
   console.log(`  Betreff: ${emailSubject}`);
   console.log(`  Zeit:    ${emailVariables.emailReceivedAt}`);
+  console.log(`  PDF:     ${pdfPath}`);
   console.log('');
 
   const result = await zbc.createProcessInstance({

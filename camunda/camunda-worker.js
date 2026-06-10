@@ -6,8 +6,8 @@ const amqp = require('amqplib');
 const fs = require('fs');
 const path = require('path');
 
-
 const { fillErpForm } = require('../rpa/rpa-erp-bot');
+const { extractInvoiceData, CONFIDENCE_THRESHOLD } = require('../ai-agent/invoice-extractor');
 
 // ── Konfiguration ─────────────────────────────────────────────────────────────
 const GRPC_ADDRESS  = process.env.GRPC_ADDRESS  || '127.0.0.1:50051';
@@ -159,7 +159,62 @@ zbc.createWorker({
   },
 });
 
-// 5. ERP-Erfassung per Playwright RPA
+// 5. KI-Extraktion von Rechnungsdaten aus PDF
+zbc.createWorker({
+  taskType: 'ai-extract-invoice',
+  taskHandler: async (job) => {
+    const { invoiceId, pdfPath } = job.variables;
+    const defaultPdfPath = path.join(__dirname, '..', 'ai-agent', 'test-invoice.pdf');
+    const targetPath = pdfPath || defaultPdfPath;
+
+    console.log(`[ai-extract-invoice] Starte KI-Extraktion für ${invoiceId} — PDF: ${targetPath}`);
+    logEvent(invoiceId, 'AI Extraction Started', 'ai-agent');
+
+    if (!fs.existsSync(targetPath)) {
+      console.warn(`[ai-extract-invoice] PDF nicht gefunden: ${targetPath} — Weiterleitung zur manuellen Prüfung`);
+      logEvent(invoiceId, 'AI Extraction Skipped (PDF not found)', 'ai-agent');
+      return job.complete({
+        aiConfidence:        0,
+        requiresHumanReview: true,
+        aiExtractionDone:    false,
+        aiError:             `PDF nicht gefunden: ${targetPath}`,
+      });
+    }
+
+    try {
+      const result = await extractInvoiceData(targetPath);
+      const pct = (result.aiConfidence * 100).toFixed(0);
+      console.log(`[ai-extract-invoice] Extraktion abgeschlossen — Konfidenz: ${pct}% (Schwelle: ${CONFIDENCE_THRESHOLD * 100}%)`);
+      console.log(`  Lieferant:    ${result.supplierName}`);
+      console.log(`  Rechnung-Nr.: ${result.invoiceNumber}`);
+      console.log(`  Betrag:       ${result.amountEuro} EUR`);
+      console.log(`  Datum:        ${result.invoiceDate}`);
+      logEvent(invoiceId, `AI Extraction Done (confidence=${result.aiConfidence})`, 'ai-agent');
+
+      return job.complete({
+        supplierName:        result.supplierName,
+        invoiceNumber:       result.invoiceNumber,
+        amountEuro:          result.amountEuro,
+        invoiceDate:         result.invoiceDate,
+        aiConfidence:        result.aiConfidence,
+        requiresHumanReview: result.requiresHumanReview,
+        aiExtractionDone:    true,
+      });
+    } catch (err) {
+      console.error(`[ai-extract-invoice] KI-Fehler: ${err.message} — Weiterleitung zur manuellen Prüfung`);
+      logEvent(invoiceId, 'AI Extraction Failed', 'ai-agent');
+      // Kein BPMN-Fehler — stattdessen mit niedriger Konfidenz abschließen → menschliche Prüfung
+      return job.complete({
+        aiConfidence:        0,
+        requiresHumanReview: true,
+        aiExtractionDone:    false,
+        aiError:             err.message,
+      });
+    }
+  },
+});
+
+// 6. ERP-Erfassung per Playwright RPA
 zbc.createWorker({
   taskType: 'rpa-erp-entry',
   taskHandler: async (job) => {
@@ -184,5 +239,5 @@ zbc.createWorker({
   },
 });
 
-console.log('Camunda Worker läuft – abonnierte Tasks: receive-invoice, grpc-save-invoice, rabbitmq-payment, archive-invoice, rpa-erp-entry');
-console.log('RPA-Modus: Playwright (direkt, kein UiPath)');
+console.log('Camunda Worker läuft – abonnierte Tasks: receive-invoice, ai-extract-invoice, grpc-save-invoice, rabbitmq-payment, archive-invoice, rpa-erp-entry');
+console.log(`RPA-Modus: Playwright (direkt, kein UiPath) | KI-Konfidenz-Schwelle: ${CONFIDENCE_THRESHOLD * 100}%`);
