@@ -28,6 +28,12 @@ const shutdownBtn = document.getElementById('shutdown-btn');
 const triggerStatus = document.getElementById('trigger-status');
 const eventLog = document.getElementById('event-log');
 const toastContainer = document.getElementById('toast-container');
+const modeToggle = document.querySelectorAll('.mode-btn');
+const liveCaseIndicator = document.getElementById('live-case-indicator');
+const liveCaseId = document.getElementById('live-case-id');
+
+// ── STATE ──────────────────────────────────────────────────────────────
+let currentMode = 'live';
 
 // ── EVENT LISTENER (werden in DOMContentLoaded registriert) ───────
 
@@ -50,9 +56,13 @@ async function triggerScenario(scenario) {
     const data = await response.json();
 
     if (data.success) {
+      // Wechsle automatisch zu Live-Modus
+      switchMode('live');
+
       showStatus(`✅ ${displayName} gestartet!`, 'success', 3000);
       showToast(`${displayName} wurde erfolgreich gestartet.`, 'success');
       console.log(`[${scenario}] Output:`, data.output);
+      console.log(`[${scenario}] Case ID:`, data.caseId);
     } else {
       showStatus(`❌ Fehler: ${data.error}`, 'error');
       showToast(`Fehler: ${data.error}`, 'error');
@@ -135,15 +145,46 @@ function showToast(message, type = 'success') {
 }
 
 /**
+ * Wechsle Mode (live/history)
+ */
+function switchMode(mode) {
+  currentMode = mode;
+
+  // Update Button States
+  modeToggle.forEach(btn => {
+    if (btn.dataset.mode === mode) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Update case_id indicator Sichtbarkeit
+  liveCaseIndicator.style.display = mode === 'live' ? 'block' : 'none';
+
+  // Refresh sofort mit neuem Mode
+  refreshEventLog();
+}
+
+/**
  * Lade und zeige Event-Log
  */
 async function refreshEventLog() {
   try {
-    const response = await fetch('/api/event-log');
+    const response = await fetch(`/api/event-log?mode=${currentMode}`);
     const data = await response.json();
 
+    // Update case_id indicator
+    if (data.lastTriggeredCaseId && currentMode === 'live') {
+      liveCaseId.textContent = data.lastTriggeredCaseId;
+    }
+
     if (!data.events || data.events.length === 0) {
-      eventLog.innerHTML = '<div class="event-placeholder">Warte auf Ereignisse...</div>';
+      if (data.message) {
+        eventLog.innerHTML = `<div class="event-placeholder">${data.message}</div>`;
+      } else {
+        eventLog.innerHTML = '<div class="event-placeholder">Warte auf Ereignisse...</div>';
+      }
       return;
     }
 
@@ -156,9 +197,16 @@ async function refreshEventLog() {
       const activity = event.activity || '-';
       const resource = event.resource ? `[${event.resource}]` : '';
 
+      // In Historie-Modus: zeige case_id als Badge
+      let caseIdBadge = '';
+      if (currentMode === 'history' && event.case_id) {
+        caseIdBadge = `<span class="event-case-id">${event.case_id}</span>`;
+      }
+
       eventItem.innerHTML = `
         <span class="event-time">${time}</span>
         <span class="event-activity">${activity} ${resource}</span>
+        ${caseIdBadge}
       `;
 
       eventLog.appendChild(eventItem);
@@ -185,6 +233,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   openTasklistBtn.addEventListener('click', () => openURL(config.camunda.urls.tasklist));
   openOperateBtn.addEventListener('click', () => openURL(config.camunda.urls.operate));
   shutdownBtn.addEventListener('click', handleShutdown);
+
+  // Mode Toggle Listener
+  modeToggle.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      switchMode(mode);
+    });
+  });
 
   await loadConfig();
   console.log('[App] Konfiguration geladen:', config);

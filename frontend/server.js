@@ -15,6 +15,10 @@ const projectRoot = path.join(__dirname, '..');
 const eventLogPath = path.join(projectRoot, config.paths.eventLog);
 const pidFilePath = path.join(projectRoot, config.paths.pidFile);
 
+// ── SERVER STATE (für Live-Mode) ───────────────────────────────────────
+let lastTriggeredCaseId = null;
+let lastTriggeredAt = null;
+
 // ── ROUTES ─────────────────────────────────────────────────────────────
 
 // GET / → Serve index.html
@@ -30,17 +34,40 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Hilfsfunktion: Schreibe Event in event-log.csv
+function logEvent(caseId, activity, resource = 'frontend') {
+  try {
+    const timestamp = new Date().toISOString();
+    const line = `${caseId},${activity},${timestamp},${resource}\n`;
+    fs.appendFileSync(eventLogPath, line);
+  } catch (error) {
+    console.warn('[API] Konnte Event nicht loggen:', error.message);
+  }
+}
+
 // POST /api/trigger/standard → Starte Standard-Szenario
 app.post('/api/trigger/standard', (req, res) => {
   try {
+    // Generiere case_id für diesen Trigger
+    const caseId = 'INV-' + Date.now();
+    lastTriggeredCaseId = caseId;
+    lastTriggeredAt = new Date().toISOString();
+
     console.log('[API] Triggere Standard-Szenario...');
+    logEvent(caseId, 'Trigger Standard', 'frontend');
+
     const result = execSync('npm run trigger:email:standard', {
       cwd: projectRoot,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe']
     });
     console.log('[API] Standard-Szenario gestartet');
-    res.json({ success: true, message: 'Standard-Szenario gestartet', output: result });
+    res.json({
+      success: true,
+      message: 'Standard-Szenario gestartet',
+      caseId,
+      output: result
+    });
   } catch (error) {
     console.error('[API] Fehler beim Standard-Szenario:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -50,71 +77,100 @@ app.post('/api/trigger/standard', (req, res) => {
 // POST /api/trigger/compliance → Starte Compliance-Szenario
 app.post('/api/trigger/compliance', (req, res) => {
   try {
+    // Generiere case_id für diesen Trigger
+    const caseId = 'INV-' + Date.now();
+    lastTriggeredCaseId = caseId;
+    lastTriggeredAt = new Date().toISOString();
+
     console.log('[API] Triggere Compliance-Szenario...');
+    logEvent(caseId, 'Trigger Compliance', 'frontend');
+
     const result = execSync('npm run trigger:email:compliance', {
       cwd: projectRoot,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe']
     });
     console.log('[API] Compliance-Szenario gestartet');
-    res.json({ success: true, message: 'Compliance-Szenario gestartet', output: result });
+    res.json({
+      success: true,
+      message: 'Compliance-Szenario gestartet',
+      caseId,
+      output: result
+    });
   } catch (error) {
     console.error('[API] Fehler beim Compliance-Szenario:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// GET /api/event-log → Lese die letzten 15 Zeilen aus event-log.csv
+// GET /api/event-log → Event-Log mit mode Parameter
+// ?mode=live   → nur Events der aktuellen case_id
+// ?mode=history → letzte 15-20 Events (default)
 app.get('/api/event-log', (req, res) => {
   try {
+    const mode = req.query.mode || 'history';
+
     if (!fs.existsSync(eventLogPath)) {
-      res.json({ events: [] });
+      res.json({ events: [], mode, lastTriggeredCaseId });
       return;
     }
 
     const content = fs.readFileSync(eventLogPath, 'utf-8');
     const lines = content.trim().split('\n').filter(line => line.length > 0);
 
-    // Header + letzte 15 Daten-Zeilen
+    // Header + Daten
     const header = lines[0];
     const dataLines = lines.slice(1);
-    const lastLines = dataLines.slice(-15);
 
     // CSV-Parser: activity kann Kommas enthalten
-    // Nutze ISO 8601 Timestamp als Ankerpunkt (eindeutig erkennbar)
-    // Format: case_id,activity,timestamp,resource
-    // Timestamp: YYYY-MM-DDTHH:mm:ss.SSSZ
     function parseCSVLine(line) {
-      // Finde ISO 8601 Timestamp (eindeutig)
       const timestampMatch = line.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/);
       if (!timestampMatch) {
-        // Fallback: Normales split
         return line.split(',').map(s => s.trim());
       }
 
       const timestamp = timestampMatch[0];
       const timestampIndex = line.indexOf(timestamp);
-
-      // Teile: alles vor timestamp, timestamp, alles nach timestamp
       const before = line.substring(0, timestampIndex).trim();
       const after = line.substring(timestampIndex + timestamp.length).trim();
 
-      // before: "case_id,activity," (activity kann Kommas haben, before endet mit Komma)
-      // Komma zwischen case_id und activity ist das ERSTE Komma
       const firstCommaIndex = before.indexOf(',');
       const caseId = before.substring(0, firstCommaIndex).trim();
       const activity = before.substring(firstCommaIndex + 1)
-        .replace(/,$/, '')  // Entferne trailing Komma
+        .replace(/,$/, '')
         .trim();
 
-      // after: ",resource"
       const resource = after.replace(/^,/, '').trim();
 
       return [caseId, activity, timestamp, resource];
     }
 
     const headerFields = header.split(',').map(f => f.trim());
-    const events = lastLines.map(line => {
+
+    // Filtere nach mode
+    let filteredLines = dataLines;
+    if (mode === 'live') {
+      if (!lastTriggeredCaseId) {
+        res.json({
+          events: [],
+          mode: 'live',
+          lastTriggeredCaseId,
+          message: 'Noch kein Prozess gestartet'
+        });
+        return;
+      }
+      // Filtere nur auf Events mit matching case_id
+      filteredLines = dataLines.filter(line => {
+        const caseId = line.split(',')[0].trim();
+        return caseId === lastTriggeredCaseId;
+      });
+    } else {
+      // history: letzte 15-20 Events
+      filteredLines = dataLines.slice(-20);
+    }
+
+    // Parse alle gefilterten Events
+    const events = filteredLines.map(line => {
       const values = parseCSVLine(line);
       const event = {};
       headerFields.forEach((field, index) => {
@@ -123,7 +179,12 @@ app.get('/api/event-log', (req, res) => {
       return event;
     });
 
-    res.json({ events });
+    res.json({
+      events,
+      mode,
+      lastTriggeredCaseId,
+      lastTriggeredAt
+    });
   } catch (error) {
     console.error('[API] Fehler beim Lesen des Event-Logs:', error.message);
     res.status(500).json({ events: [], error: error.message });

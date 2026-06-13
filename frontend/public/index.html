@@ -46,8 +46,20 @@
 
     <!-- Karte 2: Live-Status -->
     <div class="card">
-      <h2>Live-Status</h2>
-      <p class="card-subtitle">Prozessfortschritt (aktualisiert alle 2 Sekunden)</p>
+      <div class="card-header">
+        <div>
+          <h2>Live-Status</h2>
+          <p class="card-subtitle">Prozessfortschritt (aktualisiert alle 2 Sekunden)</p>
+        </div>
+        <div class="mode-toggle">
+          <button id="mode-live" class="mode-btn active" data-mode="live">🔴 Live</button>
+          <button id="mode-history" class="mode-btn" data-mode="history">📜 Historie</button>
+        </div>
+      </div>
+
+      <div id="live-case-indicator" class="case-indicator" style="display:none;">
+        Verfolge: <strong id="live-case-id">-</strong>
+      </div>
 
       <div id="event-log" class="event-log">
         <div class="event-placeholder">Warte auf Ereignisse...</div>
