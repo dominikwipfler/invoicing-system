@@ -1,8 +1,8 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { Camunda8 } = require('@camunda8/sdk');
 
-// BPMN Process ID aus Camunda Operate (Process_11wgywq = deployed Sprint 4 Prozess)
-const BPMN_PROCESS_ID = process.env.BPMN_PROCESS_ID || 'Process_11wgywq';
+// BPMN Process ID (Process_Invoice = aktueller Prozess mit AI-Task + RPA + Payment)
+const BPMN_PROCESS_ID = process.env.BPMN_PROCESS_ID || 'Process_Invoice';
 
 // Argumente: node trigger-from-email.js <absender> <betreff> [pdf-pfad]
 const emailFrom    = process.argv[2] || 'lieferant@beispiel.de';
