@@ -16,6 +16,8 @@
     "start:workflow": "node workflow-engine/server.js",
     "start:camunda-worker": "node camunda/camunda-worker.js",
     "trigger:email": "node camunda/trigger-from-email.js",
+    "trigger:email:standard": "cross-env TEST_SCENARIO=standard node camunda/trigger-from-email.js",
+    "trigger:email:compliance": "cross-env TEST_SCENARIO=compliance node camunda/trigger-from-email.js",
     "rpa:test": "node rpa/rpa-erp-bot.js",
     "rpa:demo": "cross-env RPA_HEADLESS=false node rpa/rpa-erp-bot.js",
     "deploy:bpmn": "node camunda/deploy-bpmn.js",
