@@ -377,6 +377,104 @@ if ($existingCamunda) {
   $services += [pscustomobject]@{ Name = 'Camunda Worker'; Status = 'gestartet (separates Fenster)' }
 }
 
+Write-Step '5/5' 'Frontend-Cockpit starten'
+$frontendDir = Join-Path $scriptRoot 'frontend'
+$pidFilePath = Join-Path $scriptRoot '.runtime' 'frontend-browser.pid'
+
+# Prüfe Node-Modul und installiere bei Bedarf
+$nodeModulesPath = Join-Path $frontendDir 'node_modules'
+if (-not (Test-Path $nodeModulesPath)) {
+  Write-Info 'Frontend-Abhängigkeiten fehlen, installiere npm packages...'
+  try {
+    Push-Location $frontendDir
+    npm install 2>$null | Out-Host
+    Pop-Location
+    Write-Success 'Frontend npm install abgeschlossen.'
+  } catch {
+    Write-Warn 'npm install fehlgeschlagen, versuche trotzdem zu starten.'
+    Pop-Location
+  }
+}
+
+# Starte Frontend-Server
+$existingFrontend = Get-NodeProcessByScript -RelativePath 'frontend/server.js'
+if ($existingFrontend) {
+  Write-Info "Frontend-Cockpit laeuft bereits (PID $($existingFrontend.ProcessId))."
+  $services += [pscustomobject]@{ Name = 'Frontend-Cockpit'; Status = 'bereits aktiv'; ProcessId = [int]$existingFrontend.ProcessId }
+} else {
+  Write-Info 'Frontend-Cockpit wird gestartet...'
+  $node = (Get-Command node -ErrorAction Stop).Source
+  $frontendProcess = Start-Process -FilePath $node -ArgumentList 'frontend/server.js' -WorkingDirectory $scriptRoot -NoNewWindow -PassThru
+  Write-Success "Frontend-Cockpit gestartet (PID $($frontendProcess.Id))."
+
+  # Warte auf Port 4000
+  if (-not $NoWait) {
+    Write-Info 'Warte auf Frontend-Cockpit auf Port 4000...'
+    $frontendReady = Test-TcpPort -HostName '127.0.0.1' -Port 4000 -TimeoutSeconds 15
+    if ($frontendReady) {
+      Write-Success 'Frontend-Cockpit ist auf Port 4000 erreichbar.'
+
+      # Öffne Browser mit separatem Profil (erzwingt unabhängigen Prozessbaum)
+      Write-Info 'Öffne Browser-Fenster mit eigenem Profil...'
+      $browserPaths = @(
+        'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+        'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+        'C:\Program Files\Google\Chrome\Application\chrome.exe'
+      )
+
+      $browserPath = $null
+      foreach ($path in $browserPaths) {
+        if (Test-Path $path) {
+          $browserPath = $path
+          break
+        }
+      }
+
+      if ($browserPath) {
+        # Erstelle Profil-Verzeichnis (erzwingt neuen Prozess)
+        $profileDir = Join-Path $env:TEMP 'hka-cockpit-profile'
+        if (-not (Test-Path $profileDir)) {
+          New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
+        }
+
+        # Starte Browser mit separatem Profil + Flags
+        $browserArgs = @(
+          '--new-window',
+          '--no-first-run',
+          '--no-default-browser-check',
+          "--user-data-dir=$profileDir",
+          'http://localhost:4000'
+        )
+        $browserProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
+
+        if ($browserProcess) {
+          # Speichere Browser-PID für späteren Shutdown
+          if (-not (Test-Path $runtimeDir)) {
+            New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
+          }
+          $browserProcess.Id | Out-File -FilePath $pidFilePath -Encoding UTF8 -NoNewline
+          Write-Success "Browser geöffnet mit eigenem Profil (PID $($browserProcess.Id))."
+          Write-Info "  Profil-Verzeichnis: $profileDir"
+        }
+      } else {
+        Write-Warn 'Kein Browser gefunden (Edge/Chrome). Öffne manuell: http://localhost:4000'
+      }
+    } else {
+      Write-Warn 'Frontend-Cockpit ist noch nicht bestätigt (Port 4000 nicht erreichbar).'
+    }
+  }
+
+  $services += [pscustomobject]@{ Name = 'Frontend-Cockpit'; Status = 'gestartet'; ProcessId = $frontendProcess.Id }
+  $runtimeServices += [ordered]@{
+    Name = 'Frontend-Cockpit'
+    Type = 'node'
+    ProcessId = $frontendProcess.Id
+    ScriptPath = (Join-Path $scriptRoot 'frontend/server.js')
+    Status = 'gestartet'
+  }
+}
+
 if (-not $NoWait) {
   Write-Section 'Zwischenstände'
   $grpcReady = Test-TcpPort -HostName '127.0.0.1' -Port 50051 -TimeoutSeconds 20
@@ -402,11 +500,12 @@ else {
 }
 
 $summaryLines = @(
-  @{ Label = 'RabbitMQ';       Value = 'localhost:5672 | http://localhost:15672' },
-  @{ Label = 'gRPC Service';   Value = 'localhost:50051' },
-  @{ Label = 'Payment Worker'; Value = 'Queue payment_requests' },
-  @{ Label = 'Camunda Worker'; Value = 'Verbunden mit Camunda SaaS (separates Fenster)' },
-  @{ Label = 'AI-Provider';    Value = "$aiProvider $(if ($aiMockMode) { '(MOCK)' } else { '' })" }
+  @{ Label = 'RabbitMQ';            Value = 'localhost:5672 | http://localhost:15672' },
+  @{ Label = 'gRPC Service';        Value = 'localhost:50051' },
+  @{ Label = 'Payment Worker';      Value = 'Queue payment_requests' },
+  @{ Label = 'Camunda Worker';      Value = 'Verbunden mit Camunda SaaS (separates Fenster)' },
+  @{ Label = 'Frontend-Cockpit';    Value = 'http://localhost:4000' },
+  @{ Label = 'AI-Provider';         Value = "$aiProvider $(if ($aiMockMode) { '(MOCK)' } else { '' })" }
 )
 Write-SummaryBox -Lines $summaryLines
 
@@ -421,9 +520,10 @@ foreach ($service in $services) {
 }
 
 Write-Section 'Naechste Schritte'
-Write-Host '  1. Prozess starten:   npm run trigger:email' -ForegroundColor White
-Write-Host '  2. Tasklist oeffnen:  https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e' -ForegroundColor White
-Write-Host '  3. Alles stoppen:     .\Stop-Server.ps1' -ForegroundColor White
+Write-Host '  1. Frontend-Cockpit:  http://localhost:4000' -ForegroundColor Cyan
+Write-Host '  2. Prozess starten:   npm run trigger:email' -ForegroundColor White
+Write-Host '  3. Tasklist oeffnen:  https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e' -ForegroundColor White
+Write-Host '  4. Alles stoppen:     .\Stop-Server.ps1' -ForegroundColor White
 
 Write-Host ''
 Write-Host 'Start abgeschlossen.' -ForegroundColor Green

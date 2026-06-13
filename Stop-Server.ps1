@@ -10,10 +10,10 @@ $statePath = Join-Path $runtimeDir 'server-state.json'
 
 function Write-Banner {
   Write-Host ''
-  Write-Host '+===================================================================+' -ForegroundColor DarkCyan
-  Write-Host '|           Invoicing System Stop (Sprints 1–6)                  |' -ForegroundColor DarkCyan
-  Write-Host '|         RabbitMQ + gRPC + Payment Worker + Camunda             |' -ForegroundColor DarkCyan
-  Write-Host '+===================================================================+' -ForegroundColor DarkCyan
+  Write-Host '+=====================================================================+' -ForegroundColor DarkCyan
+  Write-Host '|            Invoicing System Stop (Sprints 1–6)                    |' -ForegroundColor DarkCyan
+  Write-Host '| RabbitMQ + gRPC + Payment + Camunda + Frontend-Cockpit           |' -ForegroundColor DarkCyan
+  Write-Host '+=====================================================================+' -ForegroundColor DarkCyan
 }
 
 function Write-Step {
@@ -156,7 +156,52 @@ if (-not (Test-Path $statePath)) {
 else {
   $state = Get-Content $statePath -Raw | ConvertFrom-Json
 
-  Write-Step '1/4' 'gRPC Service beenden'
+  Write-Step '1/5' 'Frontend-Cockpit beenden'
+  $frontendService = $state.Services | Where-Object { $_.Name -eq 'Frontend-Cockpit' } | Select-Object -First 1
+  $pidFilePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '.runtime' 'frontend-browser.pid'
+
+  if ($frontendService) {
+    # Versuche API Shutdown
+    try {
+      Write-Info 'Sende Shutdown-Signal an Frontend-Server...'
+      Invoke-RestMethod -Uri 'http://localhost:4000/api/shutdown' -Method Post -TimeoutSec 3 -ErrorAction Stop | Out-Null
+      Write-Success 'Shutdown-Signal gesendet.'
+      Start-Sleep -Milliseconds 500
+    } catch {
+      Write-Warn 'Shutdown-API nicht erreichbar, beende Prozess direkt.'
+    }
+
+    # Beende Frontend-Prozess
+    $stopped = Stop-NodeProcess -ProcessId ([int]$frontendService.ProcessId) -Label 'Frontend-Cockpit'
+    if (-not $stopped) {
+      Stop-NodeByScriptPattern -Pattern 'frontend[\\/]server\.js' -Label 'Frontend-Cockpit'
+      Stop-NodeByListeningPort -Port 4000 -Label 'Frontend-Cockpit' | Out-Null
+    }
+  } else {
+    Stop-NodeByScriptPattern -Pattern 'frontend[\\/]server\.js' -Label 'Frontend-Cockpit'
+  }
+
+  # Beende Browser (INKLUSIVE aller geöffneten Tabs/Fenster)
+  if (Test-Path $pidFilePath) {
+    try {
+      $browserPid = Get-Content $pidFilePath -Raw -ErrorAction SilentlyContinue
+      if ($browserPid -and [int]::TryParse($browserPid, [ref]$null)) {
+        $browserProcess = Get-Process -Id ([int]$browserPid) -ErrorAction SilentlyContinue
+        if ($browserProcess) {
+          # Beende ALLE Child-Prozesse (Tabs, Worker, etc.)
+          $parentPid = [int]$browserPid
+          Get-Process | Where-Object { $_.Name -match '^(msedge|chrome)' -and $_.Id -eq $parentPid } |
+            ForEach-Object {
+              Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+            }
+          Write-Success 'Browser-Fenster geschlossen (inklusive alle Tabs).'
+        }
+      }
+    } catch { }
+    Remove-Item $pidFilePath -Force -ErrorAction SilentlyContinue
+  }
+
+  Write-Step '2/5' 'gRPC Service beenden'
   $grpcService = $state.Services | Where-Object { $_.Name -eq 'gRPC Service' } | Select-Object -First 1
   if ($grpcService) {
     $stopped = Stop-NodeProcess -ProcessId ([int]$grpcService.ProcessId) -Label 'gRPC Service'
@@ -170,7 +215,7 @@ else {
     Stop-NodeByListeningPort -Port 50051 -Label 'gRPC Service' | Out-Null
   }
 
-  Write-Step '2/4' 'Payment Worker beenden'
+  Write-Step '3/5' 'Payment Worker beenden'
   $paymentService = $state.Services | Where-Object { $_.Name -eq 'Payment Worker' } | Select-Object -First 1
   if ($paymentService) {
     $stopped = Stop-NodeProcess -ProcessId ([int]$paymentService.ProcessId) -Label 'Payment Worker'
@@ -182,10 +227,10 @@ else {
     Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
   }
 
-  Write-Step '3/4' 'Camunda Worker beenden'
+  Write-Step '4/5' 'Camunda Worker beenden'
   Stop-NodeByScriptPattern -Pattern 'camunda[\\/]camunda-worker\.js' -Label 'Camunda Worker'
 
-  Write-Step '4/4' 'RabbitMQ beenden'
+  Write-Step '5/5' 'RabbitMQ beenden'
   Stop-RabbitMq
 
   Remove-Item $statePath -Force -ErrorAction SilentlyContinue
