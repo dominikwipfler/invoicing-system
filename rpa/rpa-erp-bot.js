@@ -16,7 +16,7 @@ function normalizeDate(raw) {
  * Füllt das ERP-Formular automatisch aus.
  * Gibt { erpReferenzNummer, screenshotPath } zurück.
  */
-async function fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate }) {
+async function fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate, lineItems = [] }) {
   if (!fs.existsSync(SCREENSHOTS_DIR)) {
     fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   }
@@ -49,19 +49,59 @@ async function fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro,
   await page.fill('#paymentTerms',  '30 Tage netto');
   await page.fill('#invoiceNotes',  `Automatisch erfasst durch RPA – ${new Date().toISOString()}`);
 
-  // ── Rechnungsposition hinzufügen ──────────────────────────────────────────
-  await page.click('button:has-text("+ Position hinzufügen")');
-  await page.waitForTimeout(300);
+  // ── Rechnungspositionen ausfüllen ────────────────────────────────────────
+  // Falls keine lineItems vorhanden: eine Default-Position erstellen
+  const itemsToAdd = lineItems && lineItems.length > 0
+    ? lineItems
+    : [{
+        beschreibung: `${invoiceNumber || invoiceId} – ${supplierName || 'Lieferant'}`,
+        menge: 1,
+        einheit: 'Stk.',
+        einzelpreis: (parseFloat(amountEuro) / 1.19).toFixed(2),
+      }];
 
-  const lastRow = page.locator('#itemsBody tr:last-child');
-  await lastRow.locator('.desc').fill(`${invoiceNumber || invoiceId} – ${supplierName || 'Lieferant'}`);
-  await lastRow.locator('.qty').fill('1');
-  await lastRow.locator('.unit').fill('Stk.');
-  // Betrag als Nettobetrag eintragen, 19% MwSt.
-  const nettoPrice = (parseFloat(amountEuro) / 1.19).toFixed(2);
-  await lastRow.locator('.price').fill(nettoPrice);
-  await lastRow.locator('.vat').selectOption('19');
-  await page.waitForTimeout(400);
+  for (let i = 0; i < itemsToAdd.length; i++) {
+    const item = itemsToAdd[i];
+
+    // Für die erste Position: direkt ausfüllen (existiert bereits)
+    // Für weitere: "+ Position hinzufügen" Button klicken
+    if (i > 0) {
+      await page.click('button:has-text("+ Position hinzufügen")');
+      await page.waitForTimeout(300);
+    }
+
+    // Row-Selector: bei mehreren Zeilen nth(i) nutzen
+    const rowSelector = i === 0
+      ? '#itemsBody tr:first-child'
+      : `#itemsBody tr:nth-child(${i + 1})`;
+
+    const row = page.locator(rowSelector);
+
+    // Felder ausfüllen
+    if (item.beschreibung) {
+      await row.locator('.desc').fill(item.beschreibung);
+    }
+
+    if (item.menge !== undefined && item.menge !== null) {
+      await row.locator('.qty').fill(String(item.menge));
+    }
+
+    if (item.einheit) {
+      await row.locator('.unit').fill(item.einheit);
+    } else {
+      await row.locator('.unit').fill('Stk.');
+    }
+
+    // Preis eintragen (als Nettobetrag, MwSt. 19%)
+    if (item.einzelpreis !== undefined && item.einzelpreis !== null) {
+      await row.locator('.price').fill(String(item.einzelpreis));
+    }
+
+    // VAT/Steuersatz: Standard 19%
+    await row.locator('.vat').selectOption('19');
+
+    await page.waitForTimeout(300);
+  }
 
   // ── Screenshot vor dem Speichern ─────────────────────────────────────────
   const prefix = `erp-${String(invoiceId).replace(/[^a-zA-Z0-9-]/g, '')}-${Date.now()}`;

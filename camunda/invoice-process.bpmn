@@ -97,6 +97,7 @@
           <zeebe:output source="=invoiceNumber"     target="invoiceNumber"/>
           <zeebe:output source="=amountEuro"        target="amountEuro"/>
           <zeebe:output source="=invoiceDate"       target="invoiceDate"/>
+          <zeebe:output source="=lineItems"         target="lineItems"/>
           <zeebe:output source="=aiConfidence"      target="aiConfidence"/>
           <zeebe:output source="=requiresHumanReview" target="requiresHumanReview"/>
           <zeebe:output source="=aiExtractionDone"  target="aiExtractionDone"/>
@@ -296,7 +297,7 @@
     </bpmn:userTask>
 
     <!-- Gateway: Rechnung genehmigt? -->
-    <bpmn:exclusiveGateway id="GW_ApproveDecision" name="Rechnung&#10;genehmigt?" default="Flow_ApproveDecision_ERP">
+    <bpmn:exclusiveGateway id="GW_ApproveDecision" name="Rechnung&#10;genehmigt?" default="Flow_ApproveDecision_Reject">
       <bpmn:incoming>Flow_Approve_GWDecision</bpmn:incoming>
       <bpmn:outgoing>Flow_ApproveDecision_ERP</bpmn:outgoing>
       <bpmn:outgoing>Flow_ApproveDecision_Reject</bpmn:outgoing>
@@ -413,10 +414,10 @@
     <!-- Validierung -->
     <bpmn:sequenceFlow id="Flow_Validate_GWDecision"      sourceRef="Task_Validate"         targetRef="GW_ValidateDecision"/>
     <bpmn:sequenceFlow id="Flow_ValidateDecision_GW2" name="ja" sourceRef="GW_ValidateDecision" targetRef="GW_ComplianceNeeded">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=validated = true</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_ValidateDecision_Abgewiesen" name="nein" sourceRef="GW_ValidateDecision" targetRef="End_Abgewiesen">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=validated = false</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
 
     <!-- Compliance -->
@@ -426,10 +427,10 @@
     <bpmn:sequenceFlow id="Flow_GW2_Skip" name="nein"     sourceRef="GW_ComplianceNeeded"   targetRef="GW_Join2"/>
     <bpmn:sequenceFlow id="Flow_Compliance_Decision"      sourceRef="Task_Compliance"        targetRef="GW_ComplianceDecision"/>
     <bpmn:sequenceFlow id="Flow_ComplianceDecision_Join2" name="OK" sourceRef="GW_ComplianceDecision" targetRef="GW_Join2">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=complianceOk = true</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_ComplianceDecision_Fail" name="nicht OK" sourceRef="GW_ComplianceDecision" targetRef="End_ComplianceFail">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=complianceOk = false</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
 
     <!-- Info-Anfrage -->
@@ -443,9 +444,11 @@
 
     <!-- Freigabe und ERP -->
     <bpmn:sequenceFlow id="Flow_Approve_GWDecision"       sourceRef="Task_Approve"            targetRef="GW_ApproveDecision"/>
-    <bpmn:sequenceFlow id="Flow_ApproveDecision_ERP" name="ja" sourceRef="GW_ApproveDecision" targetRef="Task_EnterERP"/>
+    <bpmn:sequenceFlow id="Flow_ApproveDecision_ERP" name="ja" sourceRef="GW_ApproveDecision" targetRef="Task_EnterERP">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_ApproveDecision_Reject" name="nein" sourceRef="GW_ApproveDecision" targetRef="End_Abgelehnt">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=approved = false</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_ERPFehler_Manual"         sourceRef="Boundary_ERPFehler"     targetRef="Task_ManualERP"/>
     <bpmn:sequenceFlow id="Flow_ERP_Payment"              sourceRef="Task_EnterERP"           targetRef="Task_Payment"/>

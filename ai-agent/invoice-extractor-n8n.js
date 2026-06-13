@@ -17,6 +17,7 @@ async function extractInvoiceDataViaN8n(pdfPath, invoiceId) {
       invoiceNumber: null,
       amountEuro: null,
       invoiceDate: null,
+      lineItems: [],
       aiConfidence: 0,
       requiresHumanReview: true,
       aiExtractionDone: true,
@@ -51,11 +52,15 @@ async function extractInvoiceDataViaN8n(pdfPath, invoiceId) {
       throw new Error('n8n Webhook hat ungültiges Response-Format geliefert');
     }
 
+    // lineItems als Array or empty array sicherstellen
+    const lineItemsArray = Array.isArray(result.lineItems) ? result.lineItems : [];
+
     return {
       supplierName: result.supplierName || null,
       invoiceNumber: result.invoiceNumber || null,
       amountEuro: result.amountEuro || null,
       invoiceDate: result.invoiceDate || null,
+      lineItems: lineItemsArray,
       aiConfidence: result.aiConfidence,
       requiresHumanReview: result.requiresHumanReview,
       aiExtractionDone: result.aiExtractionDone,
@@ -67,6 +72,7 @@ async function extractInvoiceDataViaN8n(pdfPath, invoiceId) {
       invoiceNumber: null,
       amountEuro: null,
       invoiceDate: null,
+      lineItems: [],
       aiConfidence: 0,
       requiresHumanReview: true,
       aiExtractionDone: true,

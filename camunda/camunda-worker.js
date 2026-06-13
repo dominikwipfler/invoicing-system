@@ -105,7 +105,20 @@ zbc.createWorker({
       await saveViaGrpc(invoicePayload);
       console.log(`[grpc-save-invoice] ${invoiceId} gespeichert — dataComplete=${dataComplete}, ${amountCents} Cent`);
       logEvent(invoiceId, 'gRPC Save Success', 'camunda-worker');
-      return job.complete({ grpcSuccess: true, amountCents, dataComplete });
+
+      // Berechne: Compliance Check nötig? (ab 10.000 EUR)
+      const complianceNeeded = amountEuro >= 10000;
+
+      // Berechne: Info vom Lieferanten nötig? (standardmäßig false, kann von Sachbearbeiter im Formular gesetzt werden)
+      // Wird initialerweise auf false gesetzt, kann aber im Task_Validate überschrieben werden
+
+      return job.complete({
+        grpcSuccess: true,
+        amountCents,
+        dataComplete,
+        complianceNeeded,
+        infoNeeded: false,  // Default: nein, wird durch Formular-Input überschrieben
+      });
     } catch (err) {
       console.error(`[grpc-save-invoice] Fehler: ${err.message}`);
       logEvent(invoiceId, 'gRPC Save Failed', 'camunda-worker');
@@ -177,6 +190,7 @@ zbc.createWorker({
       console.warn(`[ai-extract-invoice] PDF nicht gefunden: ${targetPath} — Weiterleitung zur manuellen Prüfung`);
       logEvent(invoiceId, 'AI Extraction Skipped (PDF not found)', 'ai-agent');
       return job.complete({
+        lineItems:           [],
         aiConfidence:        0,
         requiresHumanReview: true,
         aiExtractionDone:    false,
@@ -210,6 +224,7 @@ zbc.createWorker({
         invoiceNumber:       result.invoiceNumber,
         amountEuro:          result.amountEuro,
         invoiceDate:         result.invoiceDate,
+        lineItems:           result.lineItems || [],
         aiConfidence:        result.aiConfidence,
         requiresHumanReview: result.requiresHumanReview,
         aiExtractionDone:    true,
@@ -220,6 +235,7 @@ zbc.createWorker({
       logEvent(invoiceId, `AI Extraction Failed (${AI_PROVIDER})`, 'ai-agent');
       // Kein BPMN-Fehler — stattdessen mit niedriger Konfidenz abschließen → menschliche Prüfung
       return job.complete({
+        lineItems:           [],
         aiConfidence:        0,
         requiresHumanReview: true,
         aiExtractionDone:    false,
@@ -234,12 +250,19 @@ zbc.createWorker({
 zbc.createWorker({
   taskType: 'rpa-erp-entry',
   taskHandler: async (job) => {
-    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate } = job.variables;
+    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate, lineItems } = job.variables;
     console.log(`[rpa-erp-entry] Starte Playwright Bot für Rechnung ${invoiceId}`);
     logEvent(invoiceId, 'RPA ERP Entry Started', 'camunda-worker');
 
     try {
-      const { erpReferenzNummer } = await fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate });
+      const { erpReferenzNummer } = await fillErpForm({
+        invoiceId,
+        supplierName,
+        invoiceNumber,
+        amountEuro,
+        invoiceDate,
+        lineItems: lineItems || [],
+      });
       console.log(`[rpa-erp-entry] ERP-Referenz: ${erpReferenzNummer}`);
       logEvent(invoiceId, 'RPA ERP Entry via Playwright', 'camunda-worker');
       return job.complete({
