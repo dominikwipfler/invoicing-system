@@ -181,20 +181,26 @@ else {
     Stop-NodeByScriptPattern -Pattern 'frontend[\\/]server\.js' -Label 'Frontend-Cockpit'
   }
 
-  # Beende Browser (INKLUSIVE aller geöffneten Tabs/Fenster)
+  # Beende Browser (nur wenn PID-Datei und Prozess existiert)
   if (Test-Path $pidFilePath) {
     try {
-      $browserPid = Get-Content $pidFilePath -Raw -ErrorAction SilentlyContinue
-      if ($browserPid -and [int]::TryParse($browserPid, [ref]$null)) {
-        $browserProcess = Get-Process -Id ([int]$browserPid) -ErrorAction SilentlyContinue
+      $browserPidStr = Get-Content $pidFilePath -Raw -ErrorAction SilentlyContinue
+      if ($browserPidStr -and [int]::TryParse($browserPidStr.Trim(), [ref]$browserPid)) {
+        $browserProcess = Get-Process -Id $browserPid -ErrorAction SilentlyContinue
         if ($browserProcess) {
-          # Beende ALLE Child-Prozesse (Tabs, Worker, etc.)
-          $parentPid = [int]$browserPid
-          Get-Process | Where-Object { $_.Name -match '^(msedge|chrome)' -and $_.Id -eq $parentPid } |
-            ForEach-Object {
-              Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+          # Verifiziere dass es msedge oder chrome ist (ProcessName, NICHT Pattern-Matching)
+          if ($browserProcess.ProcessName -eq 'msedge' -or $browserProcess.ProcessName -eq 'chrome') {
+            # Optional: Verifiziere dass unsere Flags in der CommandLine sind
+            $cmdLine = $browserProcess.CommandLine
+            if ($cmdLine -and ($cmdLine -match '--user-data-dir' -or $cmdLine -match '--no-first-run')) {
+              Stop-Process -Id $browserPid -Force -ErrorAction SilentlyContinue
+              Write-Success 'Browser-Fenster geschlossen.'
+            } else {
+              Write-Warn "Browser PID $browserPid hat nicht erwartete CommandLine - ignoriert (Sicherheit)."
             }
-          Write-Success 'Browser-Fenster geschlossen (inklusive alle Tabs).'
+          } else {
+            Write-Warn "PID $browserPid ist nicht msedge/chrome ($($browserProcess.ProcessName)) - ignoriert."
+          }
         }
       }
     } catch { }
