@@ -46,6 +46,91 @@ npm run ai:create-invoice
 Neues Camunda-Formular für die manuelle Prüfung der KI-Extraktion bei niedriger Konfidenz.
 Zeigt die KI-extrahierten Werte vor und erlaubt dem Sachbearbeiter, diese zu korrigieren.
 
+### `ai-agent/test-invoice-2.pdf` – Compliance-Testfall
+
+Zusätzliche Test-Rechnung für erweiterte Szenarien:
+- **Lieferant:** Nordwind IT Consulting GmbH
+- **Rechnungsnummer:** RE-2026-1102
+- **Betrag:** 52.360€ (>= 10.000€ → Compliance-Check erforderlich)
+- **KI-Konfidenz:** 65% (< 80% → menschliche Prüfung erforderlich)
+- **Auslöser:** `TEST_SCENARIO=compliance` in `trigger-from-email.js`
+
+Zeigt den kompletten Validierungsprozess mit zwei parallelen Bedingungen: KI-Prüfung UND Compliance-Check.
+
+---
+
+## Rechnungspositionen (lineItems) – Erweiterte Extraktion
+
+Seit Sprint 6+ wird die KI-Extraktion auf **Positionen** (lineItems) erweitert:
+
+### Extraktion (`ai-agent/invoice-extractor.js`)
+
+```javascript
+{
+  lineItems: [
+    {
+      beschreibung: "Consulting Services — 40h",
+      menge: 40,
+      einheit: "h",
+      einzelpreis: 150,
+      confidence: 0.95
+    },
+    {
+      beschreibung: "Software License",
+      menge: 1,
+      einheit: "Stk.",
+      einzelpreis: 5000,
+      confidence: 0.88
+    }
+  ],
+  lineItemsConfidence: 0.91  // Durchschnitt aller Positionen
+}
+```
+
+Die KI extrahiert jede Position als Objekt mit Beschreibung, Menge, Einheit und Einzelpreis.
+
+### IoMapping in BPMN (`invoice-process.bpmn` v19)
+
+```xml
+<zeebe:output source="=lineItems" target="lineItems"/>
+```
+
+Die `lineItems`-Array wird als Prozessvariable durchgereicht bis zur RPA-Schicht.
+
+### RPA: ERP-Formularfüllung (`rpa/rpa-erp-bot.js`)
+
+```javascript
+async function fillErpForm(page, invoiceData, lineItems = []) {
+  if (lineItems.length === 0) {
+    // Fallback: Einzelposition mit Invoice-ID + Supplier
+    lineItems = [{
+      beschreibung: `${invoiceData.invoiceNumber} — ${invoiceData.supplierName}`,
+      menge: 1,
+      einheit: "Stk.",
+      einzelpreis: invoiceData.amountEuro
+    }];
+  }
+
+  // Erste Position in bestehender Zeile
+  await fillPosition(page, 1, lineItems[0]);
+
+  // Weitere Positionen: "+ Position"-Button klicken + neue Zeile füllen
+  for (let i = 1; i < lineItems.length; i++) {
+    await page.click('button:has-text("+ Position hinzufügen")');
+    await page.waitForTimeout(300);
+    await fillPosition(page, i + 1, lineItems[i]);
+  }
+}
+```
+
+**Ablauf:**
+1. Erste Position wird direkt in Zeile 1 eingetragen
+2. Für jede weitere Position: 
+   - Klick auf "+ Position hinzufügen"
+   - Warte 300ms (Animation)
+   - Fülle neue Zeile mit Position i+2, i+3, etc.
+3. Alle Positionen erhalten automatisch 19% MwSt.
+
 ---
 
 ## Angepasste Komponenten

@@ -8,20 +8,27 @@ Hochschule Karlruhe — Projekt Digitalisierung von Geschaeftsprozessen (SS 2026
 ## Schnellstart
 
 ```powershell
-# 1. Alle Dienste starten (RabbitMQ, gRPC, Payment Worker, Camunda Worker)
-npm run start:servers
+# 1. Alle Dienste starten (RabbitMQ, gRPC, Payment Worker, Camunda Worker, Frontend-Cockpit)
+.\Start-Server.ps1
+# → Browser öffnet sich automatisch mit http://localhost:4000
 
-# 2. Neuen Prozess per E-Mail-Simulation starten
-# → Gibt direkten Link zur Prozessinstanz in Camunda Operate aus
+# 2. Im Frontend-Cockpit:
+#    - Klick auf "▶ Standard-Rechnung" oder "⚠ Compliance-Fall"
+#    - Live-Status zeigt Prozessfortschritt
+#    - Links zu Tasklist/Operate im Dashboard
+
+# 3. Alternativ: Prozess per CLI starten
 npm run trigger:email
 
-# 3. Manuelle Tasks im Browser bearbeiten
-# Tasklist: https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
-# Operate:  https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
+# 4. Manuelle Tasks im Browser bearbeiten (Tasklist im Cockpit oder direkt):
+#    Tasklist: https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
+#    Operate:  https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e
 
-# 4. Alles stoppen
-npm run stop:servers
+# 5. Alles stoppen (einschließlich Frontend & Browser)
+.\Stop-Server.ps1
 ```
+
+**Neu (Frontend-Cockpit):** Starten Sie das System mit `.\Start-Server.ps1` statt `npm run start:servers`. Der Browser öffnet sich automatisch mit dem Cockpit-Dashboard!
 
 **Testszenarien** (verschiedene Prozesspfade ohne Codeänderung):
 
@@ -51,6 +58,48 @@ npm run rpa:demo   # Sichtbarer Browser + Videoaufnahme (fuer Praesentation)
 ```powershell
 npm run deploy:bpmn
 ```
+
+---
+
+## Frontend-Cockpit (Sprints 1–6)
+
+**Zentrales Demo- und Steuerungs-Dashboard** für den kompletten Rechnungsverarbeitungs-Workflow.
+
+```
+http://localhost:4000
+```
+
+### Features
+
+- 🎯 **Ein-Klick-Szenarien:** Standard-Rechnung oder Compliance-Fall starten ohne CLI
+- 📊 **Live-Status:** Echtzeit-Events aus `event-log.csv` (2-Sekunden-Updates)
+- 🔗 **Direktlinks:** Zu Camunda Tasklist und Operate
+- ⏹️ **Graceful Shutdown:** Browser + alle Services mit einem Knopf
+- 🎨 **HKA-Branding:** Echtes Logo von h-ka.de integriert
+
+### Automatischer Start
+
+Das Cockpit startet automatisch beim Aufruf von `.\Start-Server.ps1` (Schritt 5/5):
+
+```powershell
+.\Start-Server.ps1
+# [5/5] Frontend-Cockpit starten
+# ✅ Frontend-Cockpit gestartet (PID 12345)
+# ✅ Browser geöffnet (http://localhost:4000)
+```
+
+Browser öffnet sich automatisch (Edge/Chrome). Fallback-Warnung, falls kein Browser vorhanden.
+
+### Herunterfahren
+
+Klick auf **🔴 Herunterfahren** im Cockpit:
+1. Sendet `POST /api/shutdown` an den Frontend-Server
+2. Beendet alle Backend-Services
+3. Schließt Browser automatisch
+
+Alternativ: `.\Stop-Server.ps1`
+
+**Siehe auch:** `docs/frontend/erklaerung-frontend.md` für vollständige Anleitung.
 
 ---
 
@@ -85,7 +134,17 @@ npm run ai:test-extract         # Claude (wenn konfiguriert)
 npm run ai:test-extract-n8n     # n8n + Gemini
 ```
 
-**Hinweis:** Beide Provider liefern identisches Output-Format und werden im BPMN-Gateway `GW_AIConfidence` gleich behandelt. Siehe auch: `docs/sprint6/erklaerung-sprint6.md` für technische Details.
+**Hinweis:** Beide Provider liefern identisches Output-Format und werden im BPMN-Gateway `GW_AIConfidence` gleich behandelt. 
+
+### Rechnungspositionen (lineItems)
+
+Die KI-Extraktion erfasst auch **Rechnungspositionen** (lineItems):
+- Jede Position: Beschreibung, Menge, Einheit, Einzelpreis
+- Wird per IoMapping durch BPMN propagiert
+- RPA-Bot füllt mehrere Positionen im ERP-Formular ein (+ Knopf "Position hinzufügen")
+- Fallback: Einzelposition mit Rechnungsnummer, falls keine Positionen erkannt
+
+Siehe auch: `docs/sprint6/erklaerung-sprint6.md` → Abschnitt "Rechnungspositionen" für technische Details.
 
 ---
 
