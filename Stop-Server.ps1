@@ -10,9 +10,10 @@ $statePath = Join-Path $runtimeDir 'server-state.json'
 
 function Write-Banner {
   Write-Host ''
-  Write-Host '+==============================================================+' -ForegroundColor DarkCyan
-  Write-Host '|                    Invoicing System Stop                    |' -ForegroundColor DarkCyan
-  Write-Host '+==============================================================+' -ForegroundColor DarkCyan
+  Write-Host '+===================================================================+' -ForegroundColor DarkCyan
+  Write-Host '|           Invoicing System Stop (Sprints 1–6)                  |' -ForegroundColor DarkCyan
+  Write-Host '|         RabbitMQ + gRPC + Payment Worker + Camunda             |' -ForegroundColor DarkCyan
+  Write-Host '+===================================================================+' -ForegroundColor DarkCyan
 }
 
 function Write-Step {
@@ -147,7 +148,7 @@ if (-not (Test-Path $statePath)) {
   Stop-NodeByScriptPattern -Pattern 'payment-system[\\/]payment-worker\.js' -Label 'Payment Worker'
 
   Write-Step '3/4' 'Camunda Worker beenden'
-  Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
+  Stop-NodeByScriptPattern -Pattern 'camunda[\\/]camunda-worker\.js' -Label 'Camunda Worker'
 
   Write-Step '4/4' 'RabbitMQ beenden'
   Stop-RabbitMq
@@ -182,7 +183,7 @@ else {
   }
 
   Write-Step '3/4' 'Camunda Worker beenden'
-  Stop-NodeByScriptPattern -Pattern 'sprint4[\\/]camunda-worker\.js' -Label 'Camunda Worker'
+  Stop-NodeByScriptPattern -Pattern 'camunda[\\/]camunda-worker\.js' -Label 'Camunda Worker'
 
   Write-Step '4/4' 'RabbitMQ beenden'
   Stop-RabbitMq

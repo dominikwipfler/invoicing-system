@@ -1,8 +1,9 @@
 param(
   [switch]$SkipRabbitMq,
-  [switch]$IncludeCamundaWorker,
   [switch]$NoWait
 )
+
+# Hinweis: Camunda Worker wird immer gestartet (früher nur mit -IncludeCamundaWorker)
 
 $ErrorActionPreference = 'Stop'
 
@@ -12,12 +13,9 @@ $statePath = Join-Path $runtimeDir 'server-state.json'
 
 function Write-Banner {
   $bannerLines = @(
-    'Invoicing System Start',
-    'RabbitMQ + gRPC Service + Payment Worker'
+    'Invoicing System Start (Sprints 1–6)',
+    'RabbitMQ + gRPC + Payment Worker + Camunda + AI-Agent'
   )
-  if ($IncludeCamundaWorker) {
-    $bannerLines[1] += ' + Camunda Worker'
-  }
   Write-Box -Lines $bannerLines -Color Magenta
 }
 
@@ -305,6 +303,23 @@ function Test-TcpPort {
 
 Write-Banner
 
+# Lade AI-Provider aus .env
+$envPath = Join-Path $scriptRoot '.env'
+$aiProvider = 'n8n'  # Standard
+$aiMockMode = $false
+
+if (Test-Path $envPath) {
+  $envContent = Get-Content $envPath -Raw
+  if ($envContent -match 'AI_PROVIDER=(\S+)') {
+    $aiProvider = $matches[1].Trim()
+  }
+  if ($envContent -match 'AI_MOCK_MODE=(true|false)') {
+    $aiMockMode = $matches[1] -eq 'true'
+  }
+}
+
+Write-Info "AI-Provider: $aiProvider $(if ($aiMockMode) { '(MOCK-Modus)' } else { '(echte API)' })"
+
 $services = @()
 $runtimeServices = @()
 
@@ -386,15 +401,13 @@ else {
   $rabbitReady = $SkipRabbitMq
 }
 
-Write-SummaryBox -Lines @(
+$summaryLines = @(
   @{ Label = 'RabbitMQ';       Value = 'localhost:5672 | http://localhost:15672' },
   @{ Label = 'gRPC Service';   Value = 'localhost:50051' },
   @{ Label = 'Payment Worker'; Value = 'Queue payment_requests' },
-  @{ Label = 'Camunda Worker'; Value = 'Verbunden mit Camunda SaaS (separates Fenster)' }
+  @{ Label = 'Camunda Worker'; Value = 'Verbunden mit Camunda SaaS (separates Fenster)' },
+  @{ Label = 'AI-Provider';    Value = "$aiProvider $(if ($aiMockMode) { '(MOCK)' } else { '' })" }
 )
-if ($IncludeCamundaWorker) {
-  $summaryLines += @{ Label = 'Camunda Worker'; Value = 'Zeebe/Camunda 8 SaaS'; Color = [ConsoleColor]::Green }
-}
 Write-SummaryBox -Lines $summaryLines
 
 Write-Section 'Gestartete Dienste'
