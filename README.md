@@ -1,6 +1,6 @@
-# Eingangsrechnungsverarbeitung — Sprint 1 bis 5
+# Eingangsrechnungsverarbeitung — Sprint 1 bis 6
 
-Digitalisierung eines Eingangsrechnungsprozesses mit gRPC, RabbitMQ, Camunda 8 BPM und RPA.
+Digitalisierung eines Eingangsrechnungsprozesses mit gRPC, RabbitMQ, Camunda 8 BPM, RPA und KI-Extraktion.
 Hochschule Karlruhe — Projekt Digitalisierung von Geschaeftsprozessen (SS 2026)
 
 ---
@@ -35,6 +35,41 @@ npm run rpa:demo   # Sichtbarer Browser + Videoaufnahme (fuer Praesentation)
 ```powershell
 node camunda/deploy-bpmn.js
 ```
+
+---
+
+## Sprint 6 — KI-Rechnungsextraktion
+
+Automatische PDF-Rechnungsdaten-Extraktion mit zwei verfügbaren KI-Providern:
+
+### Standard: n8n + Google Gemini
+
+```powershell
+# In .env (Standard — keine zusätzliche Konfiguration nötig):
+AI_PROVIDER=n8n
+N8N_WEBHOOK_URL=https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+```
+
+**Dies ist der Standard-Provider.** Nutzt n8n Webhook mit Google Gemini für schnelle, kostengünstige Dokumentenanalyse.
+
+### Alternative: Claude API (Direct)
+
+```powershell
+# In .env um auf Claude zu wechseln:
+AI_PROVIDER=claude
+ANTHROPIC_API_KEY=sk-ant-...  # Von https://console.anthropic.com
+```
+
+Nutzt Anthropic Claude Haiku direkt zur Dokumentenanalyse (höhere Genauigkeit, höhere Kosten).
+
+### Beide Provider testen:
+
+```powershell
+npm run ai:test-extract         # Claude (wenn konfiguriert)
+npm run ai:test-extract-n8n     # n8n + Gemini
+```
+
+**Hinweis:** Beide Provider liefern identisches Output-Format und werden im BPMN-Gateway `GW_AIConfidence` gleich behandelt. Siehe auch: `docs/sprint6/erklaerung-sprint6.md` für technische Details.
 
 ---
 
@@ -126,6 +161,21 @@ npm run trigger:email
         ▼
         ENDE: "Rechnung verarbeitet"
 ```
+
+---
+
+## Generierte Laufzeit-Dateien
+
+Die folgenden Dateien werden **zur Laufzeit automatisch generiert** und sind **nicht versioniert** (in `.gitignore`):
+
+| Datei | Zweck | Generiert von |
+|-------|-------|---------------|
+| `event-log.csv` (root + Service-Dir) | Prozess-Event Log für Process Mining | `logEvent()` in Camunda Worker / Service-Logs |
+| `consolidated-event-log.csv` | Konsolidierte Event-Log über alle Services | `npm run analyze:events` |
+| `rpa/screenshots/*.png` | Screenshots vor/nach ERP-Eingabe (Audit-Trail) | Playwright RPA Bot |
+| `rpa/screenshots/*.webm` | Video der Automatisierung (Demo-Modus) | Playwright RPA Bot |
+
+**Hinweis:** Nach einem frischen `git clone` müssen diese Dateien nicht manuell erstellt werden — sie entstehen beim Starten von Prozessen automatisch. `event-log.csv` wird beim ersten `logEvent()`-Aufruf mit CSV-Header initialisiert.
 
 ---
 

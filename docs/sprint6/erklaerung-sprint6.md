@@ -2,10 +2,14 @@
 
 ## Ziel
 
-Integration eines KI-Agenten (basierend auf der Claude API von Anthropic) in den bestehenden
-Rechnungsverarbeitungs-Workflow. Der Agent extrahiert automatisch Rechnungsdaten aus PDF-Dateien
-und bewertet die eigene Konfidenz. Liegt die Konfidenz unter einem konfigurierbaren Schwellenwert
-(Standard: 80 %), wird ein Mensch zur Überprüfung hinzugezogen (Human-in-the-Loop).
+Integration eines KI-Agenten in den bestehenden Rechnungsverarbeitungs-Workflow. Der Agent extrahiert 
+automatisch Rechnungsdaten aus PDF-Dateien und bewertet die eigene Konfidenz. 
+
+**Standard-Provider:** n8n Webhook mit Google Gemini (kosteneffizient, schnell)  
+**Alternative:** Anthropic Claude API (höhere Genauigkeit, optional)
+
+Liegt die Konfidenz unter einem konfigurierbaren Schwellenwert (Standard: 80 %), wird ein Mensch 
+zur Überprüfung hinzugezogen (Human-in-the-Loop).
 
 ---
 
@@ -110,14 +114,19 @@ Beide Variablen werden in `.env` eingetragen.
 ### Setup (einmalig)
 
 ```bash
-npm install                    # @anthropic-ai/sdk installieren
+npm install                    # Dependencies installieren (@anthropic-ai/sdk, etc.)
 npm run ai:create-invoice      # Test-PDF generieren
 ```
 
-In `.env` eintragen:
+In `.env` eintragen (Standard — n8n benötigt keine zusätzliche Config):
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+AI_PROVIDER=n8n                           # Standard: n8n + Gemini
+N8N_WEBHOOK_URL=https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
 AI_CONFIDENCE_THRESHOLD=0.8
+
+# Optional für Claude API Alternative:
+# AI_PROVIDER=claude
+# ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ### Prozess starten
@@ -154,16 +163,75 @@ Camunda Tasklist unter:
 
 ---
 
+## Standard: n8n + Google Gemini Provider
+
+Der **n8n-basierte Workflow ist der Standard-Provider** für die PDF-Rechnungsdaten-Extraktion. Dieser nutzt **Google Gemini** für schnelle und kosteneffiziente Dokumentenanalyse.
+
+### n8n Webhook Architektur
+
+Der n8n Workflow läuft auf der Production URL:
+```
+https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+```
+
+**Workflow-Struktur (n8n SaaS):**
+1. HTTP-Webhook empfängt POST mit `invoiceId` + `pdfBase64`
+2. Google Gemini `Analyze Document` Node extrahiert Rechnungsdaten
+3. Confidence-Berechnung pro Feld + Overall Confidence
+4. HTTP Response mit Rechnungsmetadaten + Confidence
+
+**Response Format:**
+```json
+{
+  "invoiceId": "<string>",
+  "supplierName": "<string|null>",
+  "invoiceNumber": "<string|null>",
+  "amountEuro": <number|null>,
+  "invoiceDate": "<string|null>",
+  "aiConfidence": <number 0-1>,
+  "requiresHumanReview": <boolean>,
+  "aiExtractionDone": true
+}
+```
+
+### Provider wechseln
+
+Zwei Provider sind verfügbar und liefern **identisches Output-Format**. Die Wahl erfolgt über die Umgebungsvariable:
+
+```bash
+# n8n + Gemini (Standard — keine extra Config nötig):
+AI_PROVIDER=n8n
+N8N_WEBHOOK_URL=https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+
+# Claude API (Alternative für höhere Genauigkeit):
+AI_PROVIDER=claude
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Auswirkung auf BPMN
+
+Das Gateway `GW_AIConfidence` behandelt beide Provider identisch:
+- Prüft `requiresHumanReview` Flag (nicht Provider-spezifisch)
+- Confidence Threshold (`AI_CONFIDENCE_THRESHOLD=0.8`) ist unabhängig vom Provider
+- Fallback zu manueller Prüfung (`Task_KI_Pruefung`) funktioniert für beide
+
+### Test der n8n Integration
+
+```bash
+npm run ai:test-extract-n8n     # Testet n8n Webhook (mit echtem API-Call)
+```
+
+---
+
 ## Architekturentscheidungen
+
+**Warum ist n8n + Gemini der Standard-Provider?**
+Google Gemini bietet ein ausgezeichnetes Preis-Leistungs-Verhältnis (kostenlos im Free-Tier), schnelle Dokumentenanalyse
+und ist über n8n einfach zu integrieren. Claude ist als Alternative für höhere Genauigkeit verfügbar.
 
 **Warum kein BPMN-Fehler-Boundary bei KI-Fehler?**
 Ein weicher Fallback (Abschluss mit `aiConfidence=0`) ist robuster als ein harter Fehler.
 Der Prozess läuft stets weiter – bei API-Ausfällen übernimmt automatisch der Sachbearbeiter.
-
-**Warum `claude-haiku-4-5` statt `claude-sonnet-4-6`?**
-Haiku ist deutlich kostengünstiger und für strukturierte Extraktion aus Dokumenten ausreichend
-präzise. Für produktive Einsätze mit komplexen oder handgeschriebenen Dokumenten wäre
-Sonnet oder Opus zu empfehlen.
 
 **Warum Playwright für die Test-PDF?**
 Playwright ist bereits als Abhängigkeit vorhanden (Sprint 5, RPA-Bot). Keine zusätzliche

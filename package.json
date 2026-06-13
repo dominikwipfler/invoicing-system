@@ -23,6 +23,7 @@
     "analyze:events": "node analyze-events.js",
     "ai:create-invoice": "node ai-agent/create-test-invoice.js",
     "ai:test-extract": "node ai-agent/invoice-extractor.js",
+    "ai:test-extract-n8n": "node ai-agent/test-extract-n8n.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
