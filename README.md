@@ -23,6 +23,22 @@ npm run trigger:email
 npm run stop:servers
 ```
 
+**Testszenarien** (verschiedene Prozesspfade ohne Codeänderung):
+
+```powershell
+# Standard-Szenario: Normaler Durchlauf (hohe KI-Konfidenz, Betrag < 10.000€, kein Compliance)
+npm run trigger:email:standard
+
+# Compliance-Szenario: KI-Prüfung + Compliance Check (niedrige Konfidenz, Betrag 52.360€)
+npm run trigger:email:compliance
+
+# Oder mit Mock-Mode testen (ohne echte API-Aufrufe):
+AI_MOCK_MODE=true npm run trigger:email:standard
+AI_MOCK_MODE=true npm run trigger:email:compliance
+```
+
+Siehe auch: [Pfad-Test-Anleitung](#-test-anleitung-jeden-pfad-durchtesten) für Details zum gezielten Durchtesten jeden Prozesspfads.
+
 **Playwright-Bot isoliert ausfuehren** (nur fuer Tests/Demos — laeuft nie automatisch im Prozess):
 
 ```powershell
@@ -33,7 +49,7 @@ npm run rpa:demo   # Sichtbarer Browser + Videoaufnahme (fuer Praesentation)
 **BPMN neu deployen** (nach Aenderungen am lokalen BPMN oder Formularen):
 
 ```powershell
-node camunda/deploy-bpmn.js
+npm run deploy:bpmn
 ```
 
 ---
