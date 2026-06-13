@@ -133,3 +133,4 @@ temp/
 # RPA Screenshots und Videos (Audit-Trail lokal)
 sprint5/screenshots/*.png
 sprint5/screenshots/*.webm
+event-log.csv
