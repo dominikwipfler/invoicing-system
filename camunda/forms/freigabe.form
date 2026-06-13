@@ -44,6 +44,15 @@
       "id": "Field_freigabeKommentar",
       "key": "freigabeKommentar",
       "label": "Begründung / Kommentar (Pflicht bei Ablehnung)"
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_infoNeeded",
+      "key": "infoNeeded",
+      "label": "☑ Information vom Lieferanten erforderlich (optional, nur Task_Validate)",
+      "validate": {
+        "required": false
+      }
     }
   ]
 }

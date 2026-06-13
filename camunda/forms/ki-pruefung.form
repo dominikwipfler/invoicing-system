@@ -13,82 +13,130 @@
       "text": "### KI-Extraktion prüfen und korrigieren\nDie KI hat die folgenden Rechnungsdaten aus dem PDF extrahiert. Bitte prüfen Sie die Werte und korrigieren Sie sie bei Bedarf. Die KI-Konfidenz war unter dem Schwellenwert von 80%."
     },
     {
-      "type": "number",
-      "id": "Field_aiConfidence",
-      "key": "aiConfidence",
-      "label": "KI-Konfidenz (automatisch ermittelt, 0–1)",
-      "disabled": true,
-      "decimalDigits": 2,
-      "serializeToString": false
-    },
-    {
-      "type": "text",
-      "id": "Text_Divider",
-      "text": "---\n**Bitte überprüfen und ggf. korrigieren:**"
-    },
-    {
-      "type": "textfield",
-      "id": "Field_supplierName",
-      "key": "supplierName",
-      "label": "Lieferant / Rechnungssteller *",
-      "validate": {
-        "required": true,
-        "minLength": 2
-      }
-    },
-    {
-      "type": "textfield",
-      "id": "Field_invoiceNumber",
-      "key": "invoiceNumber",
-      "label": "Rechnungsnummer *",
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "type": "number",
-      "id": "Field_amountEuro",
-      "key": "amountEuro",
-      "label": "Rechnungsbetrag inkl. MwSt (€) *",
-      "validate": {
-        "required": true,
-        "min": 0.01
-      },
-      "decimalDigits": 2,
-      "increment": "0.01",
-      "serializeToString": false
-    },
-    {
-      "type": "datetime",
-      "id": "Field_invoiceDate",
-      "key": "invoiceDate",
-      "label": "Rechnungsdatum *",
-      "subtype": "date",
-      "dateLabel": "Datum wählen",
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "type": "select",
-      "id": "Field_eingangskanal",
-      "key": "eingangskanal",
-      "label": "Eingangskanal",
-      "validate": {
-        "required": true
-      },
-      "values": [
-        { "label": "E-Mail", "value": "email" },
-        { "label": "Post / Brief", "value": "post" },
-        { "label": "EDI (automatisch)", "value": "edi" },
-        { "label": "Sonstige", "value": "sonstige" }
+      "type": "group",
+      "id": "MainLayout",
+      "label": "",
+      "columns": 2,
+      "components": [
+        {
+          "type": "text",
+          "id": "Text_LeftHeader",
+          "text": "#### Rechnungsdaten (bearbeitbar)"
+        },
+        {
+          "type": "text",
+          "id": "Text_RightHeader",
+          "text": "#### Originaldokument"
+        },
+        {
+          "type": "textfield",
+          "id": "Field_supplierName",
+          "key": "supplierName",
+          "label": "Lieferant *",
+          "validate": {
+            "required": true,
+            "minLength": 2
+          }
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Spacer1",
+          "text": ""
+        },
+        {
+          "type": "textfield",
+          "id": "Field_invoiceNumber",
+          "key": "invoiceNumber",
+          "label": "Rechnungsnummer *",
+          "validate": {
+            "required": true
+          }
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Spacer2",
+          "text": ""
+        },
+        {
+          "type": "number",
+          "id": "Field_amountEuro",
+          "key": "amountEuro",
+          "label": "Betrag (€) *",
+          "validate": {
+            "required": true,
+            "min": 0.01
+          },
+          "decimalDigits": 2,
+          "increment": "0.01",
+          "serializeToString": false
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Spacer3",
+          "text": ""
+        },
+        {
+          "type": "datetime",
+          "id": "Field_invoiceDate",
+          "key": "invoiceDate",
+          "label": "Rechnungsdatum *",
+          "subtype": "date",
+          "dateLabel": "Datum wählen",
+          "validate": {
+            "required": true
+          }
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Spacer4",
+          "text": ""
+        },
+        {
+          "type": "number",
+          "id": "Field_aiConfidence",
+          "key": "aiConfidence",
+          "label": "KI-Konfidenz (0–1)",
+          "disabled": true,
+          "decimalDigits": 2,
+          "serializeToString": false
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Info",
+          "text": "<div style='border: 1px solid #ddd; padding: 12px; border-radius: 4px; background: #f9f9f9; font-size: 13px; line-height: 1.4;'><strong>📄 Originaldokument</strong><br/><br/><div id='pdfPathDisplay' style='word-break: break-all; font-family: monospace; color: #666; font-size: 12px;'></div></div>"
+        },
+        {
+          "type": "select",
+          "id": "Field_eingangskanal",
+          "key": "eingangskanal",
+          "label": "Eingangskanal",
+          "validate": {
+            "required": true
+          },
+          "values": [
+            { "label": "E-Mail", "value": "email" },
+            { "label": "Post / Brief", "value": "post" },
+            { "label": "EDI (automatisch)", "value": "edi" },
+            { "label": "Sonstige", "value": "sonstige" }
+          ]
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Spacer5",
+          "text": ""
+        },
+        {
+          "type": "textarea",
+          "id": "Field_notizen",
+          "key": "notizen",
+          "label": "Bemerkungen (optional)"
+        },
+        {
+          "type": "html",
+          "id": "PDFPreview_Script",
+          "text": "<script>\ndocument.addEventListener('DOMContentLoaded', function() {\n  const taskData = window.__camunda_task_data || {};\n  const variables = taskData.variables || {};\n  const pdfPath = variables.pdfPath || '(Keine PDF-Datei angegeben)';\n  const displayEl = document.getElementById('pdfPathDisplay');\n  if (displayEl) {\n    displayEl.textContent = 'Pfad: ' + pdfPath;\n  }\n});\n</script>"
+        }
       ]
-    },
-    {
-      "type": "textarea",
-      "id": "Field_notizen",
-      "key": "notizen",
-      "label": "Bemerkungen / Korrekturen (optional)"
     }
   ]
 }
