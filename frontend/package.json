@@ -1,0 +1,16 @@
+{
+  "name": "invoicing-frontend",
+  "version": "1.0.0",
+  "description": "Frontend Dashboard für Invoicing System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

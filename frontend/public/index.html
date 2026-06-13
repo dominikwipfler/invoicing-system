@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rechnungsverarbeitung — Cockpit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <img src="logo.svg" alt="HKA Logo" class="logo">
+      <h1>Rechnungsverarbeitung — Cockpit</h1>
+    </div>
+    <button id="shutdown-btn" class="btn btn-danger btn-lg">🔴 Herunterfahren</button>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Karte 1: Prozess starten -->
+    <div class="card">
+      <h2>Prozess starten</h2>
+      <p class="card-subtitle">Wähle ein Testszenario, um einen Prozess zu starten</p>
+
+      <div class="button-group">
+        <button id="trigger-standard" class="btn btn-primary btn-large">
+          <span class="btn-icon">▶</span>
+          <span class="btn-text">
+            <strong>Standard-Rechnung</strong>
+            <span class="btn-description">Normaler Durchlauf, automatische Freigabe</span>
+          </span>
+        </button>
+
+        <button id="trigger-compliance" class="btn btn-warning btn-large">
+          <span class="btn-icon">⚠</span>
+          <span class="btn-text">
+            <strong>Compliance-Fall</strong>
+            <span class="btn-description">Hoher Betrag, KI-Prüfung erforderlich</span>
+          </span>
+        </button>
+      </div>
+
+      <div id="trigger-status" class="status-message"></div>
+    </div>
+
+    <!-- Karte 2: Live-Status -->
+    <div class="card">
+      <h2>Live-Status</h2>
+      <p class="card-subtitle">Prozessfortschritt (aktualisiert alle 2 Sekunden)</p>
+
+      <div id="event-log" class="event-log">
+        <div class="event-placeholder">Warte auf Ereignisse...</div>
+      </div>
+    </div>
+
+    <!-- Karte 3: Navigation -->
+    <div class="card">
+      <h2>Navigation</h2>
+      <p class="card-subtitle">Öffne Camunda Tasklist oder Operate in neuem Fenster</p>
+
+      <div class="button-group">
+        <button id="open-tasklist" class="btn btn-secondary btn-medium">
+          📋 Tasklist öffnen
+        </button>
+
+        <button id="open-operate" class="btn btn-secondary btn-medium">
+          🔍 Operate öffnen
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "server": {
+    "port": 4000,
+    "host": "localhost"
+  },
+  "camunda": {
+    "region": "bru-2",
+    "clusterId": "487e2664-45fe-4a21-9e53-860eddc37e5e",
+    "urls": {
+      "tasklist": "https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e",
+      "operate": "https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e"
+    }
+  },
+  "paths": {
+    "eventLog": "event-log.csv",
+    "pidFile": ".frontend-browser.pid"
+  }
+}
