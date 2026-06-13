@@ -446,16 +446,30 @@ if ($existingFrontend) {
           "--user-data-dir=$profileDir",
           'http://localhost:4000'
         )
-        $browserProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
+        $launcherProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
 
-        if ($browserProcess) {
-          # Speichere Browser-PID für späteren Shutdown
-          if (-not (Test-Path $runtimeDir)) {
-            New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
+        if ($launcherProcess) {
+          # Warte kurz bis der Hauptprozess spawnt (Start-Process gibt Launcher zurück, nicht Hauptprozess)
+          Start-Sleep -Milliseconds 500
+
+          # Finde den Hauptprozess (mit --user-data-dir Flag)
+          $mainBrowser = Get-Process | Where-Object {
+            ($_.ProcessName -eq 'msedge' -or $_.ProcessName -eq 'chrome') -and
+            $_.CommandLine -and
+            $_.CommandLine -match '--user-data-dir'
+          } | Select-Object -First 1
+
+          # Speichere Hauptprozess-PID für späteren Shutdown
+          if ($mainBrowser) {
+            if (-not (Test-Path $runtimeDir)) {
+              New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
+            }
+            $mainBrowser.Id | Out-File -FilePath $pidFilePath -Encoding UTF8 -NoNewline
+            Write-Success "Browser geöffnet mit eigenem Profil (PID $($mainBrowser.Id))."
+            Write-Info "  Profil-Verzeichnis: $profileDir"
+          } else {
+            Write-Warn 'Browser-Hauptprozess konnte nicht identifiziert werden (Shell-Kommando öffnet trotzdem)'
           }
-          $browserProcess.Id | Out-File -FilePath $pidFilePath -Encoding UTF8 -NoNewline
-          Write-Success "Browser geöffnet mit eigenem Profil (PID $($browserProcess.Id))."
-          Write-Info "  Profil-Verzeichnis: $profileDir"
         }
       } else {
         Write-Warn 'Kein Browser gefunden (Edge/Chrome). Öffne manuell: http://localhost:4000'
