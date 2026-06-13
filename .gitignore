@@ -140,3 +140,4 @@ workflow-engine/event-log.csv
 # RPA Screenshots und Videos (Audit-Trail lokal, generiert zur Laufzeit)
 rpa/screenshots/*.png
 rpa/screenshots/*.webm
+.claude/settings.json
