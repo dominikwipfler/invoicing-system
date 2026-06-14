@@ -59,6 +59,41 @@ const liveCaseId = document.getElementById('live-case-id');
 // ── STATE ──────────────────────────────────────────────────────────────
 let currentMode = 'live';
 
+// ── PROZESS-HISTORY (localStorage) ────────────────────────────────────
+const HISTORY_KEY = 'invoicing_process_history';
+
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveToHistory(entry) {
+  const history = loadHistory();
+  history.unshift(entry);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 5)));
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById('process-history');
+  if (!container) return;
+  const history = loadHistory();
+  if (history.length === 0) {
+    container.innerHTML = '<p class="history-empty">Noch keine Prozesse gestartet.</p>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <div class="history-item">
+      <span class="history-scenario">${h.scenario}</span>
+      <span class="history-case">${h.caseId}</span>
+      <span class="history-time">${new Date(h.startedAt).toLocaleTimeString('de-DE')}</span>
+    </div>
+  `).join('');
+}
+
 // ── EVENT LISTENER (werden in DOMContentLoaded registriert) ───────
 
 // ── FUNKTIONEN ─────────────────────────────────────────────────────
@@ -70,10 +105,13 @@ async function triggerScenario(scenario) {
   const endpoint = `/api/trigger/${scenario}`;
   const displayName = scenario === 'standard' ? 'Standard-Rechnung' : 'Compliance-Fall';
 
-  // UI: Zeige Lade-Status
+  // UI: Zeige Lade-Status + Spinner auf dem angeklickten Button
   showStatus(`Starte ${displayName}...`, 'loading');
   triggerStandardBtn.disabled = true;
   triggerComplianceBtn.disabled = true;
+  const activeBtn = scenario === 'standard' ? triggerStandardBtn : triggerComplianceBtn;
+  const originalIcon = activeBtn.querySelector('.btn-icon').textContent;
+  activeBtn.querySelector('.btn-icon').innerHTML = '<span class="spinner"></span>';
 
   try {
     const response = await fetch(endpoint, { method: 'POST' });
@@ -85,6 +123,7 @@ async function triggerScenario(scenario) {
 
       showStatus(`✅ ${displayName} gestartet!`, 'success', 3000);
       showToast(`${displayName} wurde erfolgreich gestartet.`, 'success');
+      saveToHistory({ scenario: displayName, caseId: data.caseId, startedAt: new Date().toISOString() });
       console.log(`[${scenario}] Output:`, data.output);
       console.log(`[${scenario}] Case ID:`, data.caseId);
 
@@ -99,11 +138,16 @@ async function triggerScenario(scenario) {
       showToast(`Fehler: ${data.error}`, 'error');
     }
   } catch (error) {
-    showStatus(`❌ Netzwerkfehler: ${error.message}`, 'error');
-    showToast(`Netzwerkfehler: ${error.message}`, 'error');
+    const isNetworkError = error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed');
+    const userMessage = isNetworkError
+      ? '❌ Server nicht erreichbar — ist das System gestartet? (Start-Server.ps1)'
+      : `❌ Fehler: ${error.message}`;
+    showStatus(userMessage, 'error');
+    showToast(userMessage.replace('❌ ', ''), 'error');
   } finally {
     triggerStandardBtn.disabled = false;
     triggerComplianceBtn.disabled = false;
+    activeBtn.querySelector('.btn-icon').textContent = originalIcon;
   }
 }
 
@@ -281,5 +325,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadConfig();
   console.log('[App] Konfiguration geladen:', config);
   refreshEventLog();
+  renderHistory();
   console.log('[App] Ready!');
 });

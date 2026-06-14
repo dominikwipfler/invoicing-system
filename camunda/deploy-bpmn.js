@@ -14,10 +14,13 @@ async function deploy() {
 
   const result = await zbc.deployResources([
     { processFilename: bpmnFile },
-    { name: 'rechnungserfassung.form', form: fs.readFileSync(path.join(formsDir, 'rechnungserfassung.form')) },
-    { name: 'freigabe.form',           form: fs.readFileSync(path.join(formsDir, 'freigabe.form')) },
-    { name: 'erp-bestaetigung.form',   form: fs.readFileSync(path.join(formsDir, 'erp-bestaetigung.form')) },
-    { name: 'ki-pruefung.form',        form: fs.readFileSync(path.join(formsDir, 'ki-pruefung.form')) },
+    { name: 'rechnungserfassung.form',  form: fs.readFileSync(path.join(formsDir, 'rechnungserfassung.form')) },
+    { name: 'validierung.form',         form: fs.readFileSync(path.join(formsDir, 'validierung.form')) },
+    { name: 'info-lieferant.form',      form: fs.readFileSync(path.join(formsDir, 'info-lieferant.form')) },
+    { name: 'freigabe.form',            form: fs.readFileSync(path.join(formsDir, 'freigabe.form')) },
+    { name: 'compliance-check.form',    form: fs.readFileSync(path.join(formsDir, 'compliance-check.form')) },
+    { name: 'erp-bestaetigung.form',    form: fs.readFileSync(path.join(formsDir, 'erp-bestaetigung.form')) },
+    { name: 'ki-pruefung.form',         form: fs.readFileSync(path.join(formsDir, 'ki-pruefung.form')) },
   ]);
 
   console.log('\nDeployment erfolgreich:');

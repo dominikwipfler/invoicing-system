@@ -10,7 +10,7 @@
     {
       "type": "text",
       "id": "Text_Header",
-      "text": "### Rechnungsdaten erfassen\nBitte extrahieren Sie die folgenden Daten aus der eingegangenen E-Mail und füllen Sie das Formular aus."
+      "text": "### Rechnungsdaten erfassen\nBitte extrahieren Sie die folgenden Daten aus der eingegangenen E-Mail und füllen Sie das Formular aus.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
     },
     {
       "type": "textfield",
