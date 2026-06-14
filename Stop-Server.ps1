@@ -8,6 +8,9 @@ $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $runtimeDir = Join-Path $scriptRoot '.runtime'
 $statePath = Join-Path $runtimeDir 'server-state.json'
 
+# Cockpit Browser Profile (must match Start-Server.ps1)
+$cockpitProfile = Join-Path $env:LOCALAPPDATA 'invoicing-cockpit-profile'
+
 function Write-Banner {
   Write-Host ''
   Write-Host '+=====================================================================+' -ForegroundColor DarkCyan
@@ -160,17 +163,23 @@ else {
   $frontendService = $state.Services | Where-Object { $_.Name -eq 'Frontend-Cockpit' } | Select-Object -First 1
 
   if ($frontendService) {
-    # Versuche API Shutdown
-    try {
-      Write-Info 'Sende Shutdown-Signal an Frontend-Server...'
-      Invoke-RestMethod -Uri 'http://localhost:4000/api/shutdown' -Method Post -TimeoutSec 3 -ErrorAction Stop | Out-Null
-      Write-Success 'Shutdown-Signal gesendet.'
-      Start-Sleep -Milliseconds 500
-    } catch {
-      Write-Warn 'Shutdown-API nicht erreichbar, beende Prozess direkt.'
+    # Schließe Cockpit-Browser-Fenster über Profil-Pfad-Suche (alle msedge.exe mit unserem Profil)
+    Write-Info 'Schließe Cockpit-Browser-Fenster...'
+    $cockpitProcesses = Get-CimInstance Win32_Process | Where-Object {
+      $_.Name -eq 'msedge.exe' -and
+      $_.CommandLine -and
+      $_.CommandLine -match [regex]::Escape($cockpitProfile)
+    }
+    if ($cockpitProcesses) {
+      $cockpitProcesses | ForEach-Object {
+        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+      }
+      Write-Success "Cockpit-Fenster geschlossen ($($cockpitProcesses.Count) Prozess(e))."
+    } else {
+      Write-Warn 'Kein Cockpit-Fenster mit Profil gefunden — nichts zu schliessen.'
     }
 
-    # Beende Frontend-Prozess
+    # Beende Frontend-Prozess (bereits durch process.exit beendet, Fallback falls nötig)
     $stopped = Stop-NodeProcess -ProcessId ([int]$frontendService.ProcessId) -Label 'Frontend-Cockpit'
     if (-not $stopped) {
       Stop-NodeByScriptPattern -Pattern 'frontend[\\/]server\.js' -Label 'Frontend-Cockpit'

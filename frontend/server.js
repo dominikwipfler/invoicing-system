@@ -1,5 +1,14 @@
 const express = require('express');
-const { execSync, exec } = require('child_process');
+const { exec } = require('child_process');
+
+function runCommand(cmd, opts) {
+  return new Promise((resolve, reject) => {
+    exec(cmd, opts, (err, stdout) => {
+      if (err) { err.stdout = stdout; reject(err); }
+      else { resolve(stdout); }
+    });
+  });
+}
 const fs = require('fs');
 const path = require('path');
 
@@ -46,28 +55,23 @@ function logEvent(caseId, activity, resource = 'frontend') {
 }
 
 // POST /api/trigger/standard → Starte Standard-Szenario
-app.post('/api/trigger/standard', (req, res) => {
+app.post('/api/trigger/standard', async (req, res) => {
+  const caseId = 'INV-' + Date.now();
+  lastTriggeredCaseId = caseId;
+  lastTriggeredAt = new Date().toISOString();
+  logEvent(caseId, 'Trigger Standard', 'frontend');
+  console.log('[API] Triggere Standard-Szenario...');
   try {
-    // Generiere case_id für diesen Trigger
-    const caseId = 'INV-' + Date.now();
-    lastTriggeredCaseId = caseId;
-    lastTriggeredAt = new Date().toISOString();
-
-    console.log('[API] Triggere Standard-Szenario...');
-    logEvent(caseId, 'Trigger Standard', 'frontend');
-
-    const result = execSync('npm run trigger:email:standard', {
+    const result = await runCommand('npm run trigger:email:standard', {
       cwd: projectRoot,
       encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe']
+      timeout: 60000,
+      env: { ...process.env, INVOICE_ID: caseId },
     });
-    console.log('[API] Standard-Szenario gestartet');
-    res.json({
-      success: true,
-      message: 'Standard-Szenario gestartet',
-      caseId,
-      output: result
-    });
+    const keyMatch = result.match(/Process Instance Key:\s+(\d+)/);
+    const processInstanceKey = keyMatch ? keyMatch[1] : null;
+    console.log('[API] Standard-Szenario gestartet, Key:', processInstanceKey);
+    res.json({ success: true, message: 'Standard-Szenario gestartet', caseId, processInstanceKey, output: result });
   } catch (error) {
     console.error('[API] Fehler beim Standard-Szenario:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -75,28 +79,23 @@ app.post('/api/trigger/standard', (req, res) => {
 });
 
 // POST /api/trigger/compliance → Starte Compliance-Szenario
-app.post('/api/trigger/compliance', (req, res) => {
+app.post('/api/trigger/compliance', async (req, res) => {
+  const caseId = 'INV-' + Date.now();
+  lastTriggeredCaseId = caseId;
+  lastTriggeredAt = new Date().toISOString();
+  logEvent(caseId, 'Trigger Compliance', 'frontend');
+  console.log('[API] Triggere Compliance-Szenario...');
   try {
-    // Generiere case_id für diesen Trigger
-    const caseId = 'INV-' + Date.now();
-    lastTriggeredCaseId = caseId;
-    lastTriggeredAt = new Date().toISOString();
-
-    console.log('[API] Triggere Compliance-Szenario...');
-    logEvent(caseId, 'Trigger Compliance', 'frontend');
-
-    const result = execSync('npm run trigger:email:compliance', {
+    const result = await runCommand('npm run trigger:email:compliance', {
       cwd: projectRoot,
       encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe']
+      timeout: 60000,
+      env: { ...process.env, INVOICE_ID: caseId },
     });
-    console.log('[API] Compliance-Szenario gestartet');
-    res.json({
-      success: true,
-      message: 'Compliance-Szenario gestartet',
-      caseId,
-      output: result
-    });
+    const keyMatch = result.match(/Process Instance Key:\s+(\d+)/);
+    const processInstanceKey = keyMatch ? keyMatch[1] : null;
+    console.log('[API] Compliance-Szenario gestartet, Key:', processInstanceKey);
+    res.json({ success: true, message: 'Compliance-Szenario gestartet', caseId, processInstanceKey, output: result });
   } catch (error) {
     console.error('[API] Fehler beim Compliance-Szenario:', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -148,7 +147,7 @@ app.get('/api/event-log', (req, res) => {
     const headerFields = header.split(',').map(f => f.trim());
 
     // Filtere nach mode
-    let filteredLines = dataLines;
+    let filteredLines;
     if (mode === 'live') {
       if (!lastTriggeredCaseId) {
         res.json({
@@ -191,43 +190,21 @@ app.get('/api/event-log', (req, res) => {
   }
 });
 
-// POST /api/shutdown → Fahre System herunter
-app.post('/api/shutdown', async (req, res) => {
+// POST /api/shutdown → Fahre System herunter (Flag-File-Pattern)
+app.post('/api/shutdown', (req, res) => {
   try {
-    console.log('[API] Shutdown initiiert...');
+    console.log('[API] Shutdown angefordert — schreibe Flag-Datei...');
 
-    // 1. Versuche Browser-Fenster zu schließen (falls PID vorhanden)
-    if (fs.existsSync(pidFilePath)) {
-      try {
-        const pidContent = fs.readFileSync(pidFilePath, 'utf-8').trim();
-        const pid = parseInt(pidContent);
-        if (pid > 0) {
-          console.log(`[API] Versuche Browser-Prozess zu beenden (PID: ${pid})...`);
-          execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' });
-          fs.unlinkSync(pidFilePath);
-          console.log('[API] Browser-Prozess beendet');
-        }
-      } catch (err) {
-        console.warn('[API] Browser-Prozess konnte nicht beendet werden:', err.message);
-      }
+    const runtimeDir = path.join(projectRoot, '.runtime');
+    if (!fs.existsSync(runtimeDir)) {
+      fs.mkdirSync(runtimeDir, { recursive: true });
     }
+    const flagPath = path.join(runtimeDir, 'shutdown-requested');
+    fs.writeFileSync(flagPath, new Date().toISOString());
+    console.log('[API] Flag-Datei geschrieben — Start-Server.ps1 übernimmt den Shutdown.');
 
-    // 2. Rufe Stop-Server.ps1 auf (auf Windows über PowerShell)
-    console.log('[API] Starte Stop-Server.ps1...');
-    try {
-      exec('powershell -ExecutionPolicy Bypass -File .\\Stop-Server.ps1', {
-        cwd: projectRoot,
-        stdio: 'ignore'
-      });
-      console.log('[API] Stop-Server.ps1 gestartet');
-    } catch (err) {
-      console.warn('[API] Stop-Server.ps1 konnte nicht aufgerufen werden:', err.message);
-    }
+    res.json({ success: true, message: 'Shutdown angefordert' });
 
-    // 3. Sende OK-Response (der Browser wird kurz danach geschlossen)
-    res.json({ success: true, message: 'System wird heruntergefahren...' });
-
-    // 4. Beende diesen Prozess nach kurzer Verzögerung
     setTimeout(() => {
       console.log('[API] Frontend-Server wird beendet');
       process.exit(0);

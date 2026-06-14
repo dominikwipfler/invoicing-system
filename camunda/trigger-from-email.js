@@ -39,6 +39,7 @@ const emailVariables = {
   emailReceivedAt: new Date().toISOString(),
   eingangskanal:   'email',
   pdfPath,
+  ...(process.env.INVOICE_ID ? { invoiceId: process.env.INVOICE_ID } : {}),
 };
 
 async function triggerFromEmail() {

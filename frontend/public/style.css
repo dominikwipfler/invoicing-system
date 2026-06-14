@@ -6,9 +6,9 @@
 /* ─ LIGHT MODE (Default) ───────────────────────────────────────────── */
 html[data-theme="light"],
 :root {
-  /* Colors — Light Theme */
-  --color-primary: #00838f;
-  --color-primary-dark: #00695c;
+  /* Colors — Light Theme (Gradient Palette: Blau → Türkis → Grün → Lila → Pink) */
+  --color-primary: #4facfe;
+  --color-primary-dark: #0084ff;
   --color-warning: #f57c00;
   --color-danger: #c62828;
   --color-success: #2e7d32;
@@ -46,9 +46,9 @@ html[data-theme="light"],
 
 /* ─ DARK MODE ─────────────────────────────────────────────────────── */
 html[data-theme="dark"] {
-  /* Colors — Dark Theme */
-  --color-primary: #00bcd4;
-  --color-primary-dark: #0097a7;
+  /* Colors — Dark Theme (Gradient Palette: Türkis → Grün → Lila) */
+  --color-primary: #00f2c4;
+  --color-primary-dark: #00d4aa;
   --color-warning: #ff9800;
   --color-danger: #f44336;
   --color-success: #4caf50;
@@ -87,7 +87,9 @@ html, body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: linear-gradient(135deg, var(--color-bg-card), #263238);
+  background: linear-gradient(135deg, #4facfe 0%, #7367f0 50%, #43e97b 100%);
+  background-size: 200% 200%;
+  animation: gradientMorph 15s ease infinite;
   border-bottom: 2px solid var(--color-primary);
   padding: var(--sp-md) var(--sp-lg);
   display: flex;
@@ -112,7 +114,7 @@ html, body {
 .logo-text {
   font-size: var(--fs-lg);
   font-weight: 700;
-  color: var(--color-text);
+  color: #1a1f2e;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -121,18 +123,18 @@ html, body {
 }
 
 .logo-accent {
-  color: var(--color-primary);
+  color: #1a1f2e;
 }
 
 .header h1 {
   font-size: var(--fs-2xl);
-  color: var(--color-primary);
+  color: #1a1f2e;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
-/* MAIN CONTAINER — CSS Grid 3-Column Layout (Responsive) */
+/* MAIN CONTAINER — Vollbreite, unterhalb der Aktionsleiste */
 /* ─────────────────────────────────────────────────────────────────── */
 
 body {
@@ -140,15 +142,40 @@ body {
   flex-direction: column;
 }
 
+/* Aktionsleiste: 4 Buttons in einer Reihe */
+.action-bar-wrapper {
+  max-width: 1400px;
+  margin: var(--sp-lg) auto 0;
+  padding: 0 var(--sp-xl);
+  width: 100%;
+}
+
+.action-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-md);
+}
+
+.btn-action {
+  width: 100%;
+  padding: var(--sp-md) var(--sp-lg);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Status-Nachricht unter der Aktionsleiste */
+.action-bar-wrapper .status-message {
+  margin-top: var(--sp-sm);
+}
+
+/* Haupt-Container: volle Breite, kein Grid mehr */
 .container {
   flex: 1;
   max-width: 1400px;
-  margin: 0 auto;
-  padding: var(--sp-xl);
+  margin: var(--sp-lg) auto var(--sp-xl);
+  padding: 0 var(--sp-xl);
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-  gap: var(--sp-lg);
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
@@ -162,6 +189,7 @@ body {
   padding: var(--sp-lg);
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .card:hover {
@@ -400,19 +428,24 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--sp-md);
-  max-height: 400px;
+  max-height: 560px;
   overflow-y: auto;
+  overflow-x: hidden;
   font-family: 'Courier New', 'Monaco', monospace;
   font-size: var(--fs-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .event-item {
   padding: var(--sp-sm);
   border-bottom: 1px solid var(--color-border);
   display: grid;
-  grid-template-columns: 180px 1fr auto auto;
+  grid-template-columns: 80px 1fr auto;
   gap: var(--sp-md);
   align-items: center;
+  min-width: 0;
 }
 
 .event-item:last-child {
@@ -422,13 +455,13 @@ body {
 .event-time {
   color: var(--color-primary);
   font-weight: 600;
-  min-width: 180px;
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .event-activity {
   color: var(--color-text-light);
-  flex-grow: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
   word-break: break-word;
 }
 
@@ -511,6 +544,12 @@ body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes gradientMorph {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 /* ─────────────────────────────────────────────────────────────────── */
 /* SCROLLBAR — Custom, Cyan Primary */
 /* ─────────────────────────────────────────────────────────────────── */
@@ -548,13 +587,17 @@ body {
     font-size: var(--fs-xl);
   }
 
-  .container {
-    grid-template-columns: 1fr;
-    padding: var(--sp-md);
+  .action-bar-wrapper {
+    padding: 0 var(--sp-md);
   }
 
-  .btn-large {
-    flex-direction: row;
+  .action-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .container {
+    padding: 0 var(--sp-md);
+    margin-top: var(--sp-md);
   }
 
   .toast-container {
@@ -567,12 +610,7 @@ body {
   }
 
   .event-item {
-    grid-template-columns: 1fr;
-    gap: var(--sp-sm);
-  }
-
-  .event-time {
-    min-width: auto;
+    grid-template-columns: 70px 1fr auto;
   }
 
   .card-header {
@@ -586,5 +624,11 @@ body {
 
   .mode-btn {
     flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-bar {
+    grid-template-columns: 1fr;
   }
 }

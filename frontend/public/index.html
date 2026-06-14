@@ -19,35 +19,19 @@
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="container">
-    <!-- Karte 1: Prozess starten -->
-    <div class="card">
-      <h2>Prozess starten</h2>
-      <p class="card-subtitle">Wähle ein Testszenario, um einen Prozess zu starten</p>
-
-      <div class="button-group">
-        <button id="trigger-standard" class="btn btn-primary btn-large">
-          <span class="btn-icon">▶</span>
-          <span class="btn-text">
-            <strong>Standard-Rechnung</strong>
-            <span class="btn-description">Normaler Durchlauf, automatische Freigabe</span>
-          </span>
-        </button>
-
-        <button id="trigger-compliance" class="btn btn-warning btn-large">
-          <span class="btn-icon">⚠</span>
-          <span class="btn-text">
-            <strong>Compliance-Fall</strong>
-            <span class="btn-description">Hoher Betrag, KI-Prüfung erforderlich</span>
-          </span>
-        </button>
-      </div>
-
-      <div id="trigger-status" class="status-message"></div>
+  <!-- Aktionsleiste -->
+  <div class="action-bar-wrapper">
+    <div class="action-bar">
+      <button id="trigger-standard" class="btn btn-primary btn-action">▶ Standard-Rechnung</button>
+      <button id="trigger-compliance" class="btn btn-warning btn-action">⚠ Compliance-Fall</button>
+      <button id="open-tasklist" class="btn btn-secondary btn-action">📋 Tasklist öffnen</button>
+      <button id="open-operate" class="btn btn-secondary btn-action">🔍 Operate öffnen</button>
     </div>
+    <div id="trigger-status" class="status-message"></div>
+  </div>
 
-    <!-- Karte 2: Live-Status -->
+  <!-- Live-Status / Historie Panel -->
+  <main class="container">
     <div class="card">
       <div class="card-header">
         <div>
@@ -66,22 +50,6 @@
 
       <div id="event-log" class="event-log">
         <div class="event-placeholder">Warte auf Ereignisse...</div>
-      </div>
-    </div>
-
-    <!-- Karte 3: Navigation -->
-    <div class="card">
-      <h2>Navigation</h2>
-      <p class="card-subtitle">Öffne Camunda Tasklist oder Operate in neuem Fenster</p>
-
-      <div class="button-group">
-        <button id="open-tasklist" class="btn btn-secondary btn-medium">
-          📋 Tasklist öffnen
-        </button>
-
-        <button id="open-operate" class="btn btn-secondary btn-medium">
-          🔍 Operate öffnen
-        </button>
       </div>
     </div>
   </main>

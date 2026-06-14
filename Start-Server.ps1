@@ -11,6 +11,10 @@ $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $runtimeDir = Join-Path $scriptRoot '.runtime'
 $statePath = Join-Path $runtimeDir 'server-state.json'
 
+# Cockpit Browser Profile (isolated, eigener Prozessbaum)
+$cockpitProfile = Join-Path $env:LOCALAPPDATA 'invoicing-cockpit-profile'
+$pidFilePath = Join-Path $runtimeDir 'frontend-browser.pid'
+
 function Write-Banner {
   $bannerLines = @(
     'Invoicing System Start (Sprints 1–6)',
@@ -407,19 +411,61 @@ if ($existingFrontend) {
   $frontendProcess = Start-Process -FilePath $node -ArgumentList 'frontend/server.js' -WorkingDirectory $scriptRoot -NoNewWindow -PassThru
   Write-Success "Frontend-Cockpit gestartet (PID $($frontendProcess.Id))."
 
-  # Warte auf Port 4000
+  # Warte auf Port 4000 mit HTTP-Health-Check
   if (-not $NoWait) {
     Write-Info 'Warte auf Frontend-Cockpit auf Port 4000...'
-    $frontendReady = Test-TcpPort -HostName '127.0.0.1' -Port 4000 -TimeoutSeconds 15
+    $frontendReady = $false
+    $deadline = (Get-Date).AddSeconds(20)
+
+    while ((Get-Date) -lt $deadline -and -not $frontendReady) {
+      try {
+        $response = Invoke-WebRequest -Uri 'http://localhost:4000' -TimeoutSec 2 -UseBasicParsing -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+          $frontendReady = $true
+        }
+      } catch {
+        # Server noch nicht bereit, versuche in 500ms nochmal
+        Start-Sleep -Milliseconds 500
+      }
+    }
+
     if ($frontendReady) {
       Write-Success 'Frontend-Cockpit ist auf Port 4000 erreichbar.'
 
-      # Öffne Browser-Fenster im Standard-Browser
-      Write-Info 'Öffne http://localhost:4000 im Standard-Browser...'
-      Start-Process 'http://localhost:4000'
-      Write-Success 'Browser-Fenster geöffnet.'
+      # Öffne Browser-Fenster mit isoliertem Profil (verhindert Einmischung mit anderen Edge-Fenstern/WebView2-Apps)
+      Write-Info 'Öffne http://localhost:4000 in isoliertem Cockpit-Fenster...'
+      try {
+        # Versuche Edge explizit
+        $edgePath = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+        if (-not (Test-Path $edgePath)) {
+          $edgePath = 'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+        }
+
+        if (Test-Path $edgePath) {
+          $browserProc = Start-Process -FilePath $edgePath -ArgumentList @(
+            '--new-window',
+            "--user-data-dir=$cockpitProfile",
+            '--no-first-run',
+            '--no-default-browser-check',
+            'http://localhost:4000'
+          ) -PassThru
+
+          if ($browserProc) {
+            Write-Success "Cockpit-Fenster geöffnet (Profil: $cockpitProfile)."
+          } else {
+            Write-Warn 'Cockpit-Fenster konnte nicht gestartet werden.'
+          }
+        } else {
+          Write-Warn 'Microsoft Edge nicht gefunden, nutze Standard-Browser...'
+          Start-Process 'http://localhost:4000'
+          Write-Success 'Browser-Fenster geöffnet (Standard-Browser).'
+        }
+      } catch {
+        Write-Warn "Fehler beim Öffnen des Cockpit-Fensters: $($_.Exception.Message)"
+        Start-Process 'http://localhost:4000'
+      }
     } else {
-      Write-Warn 'Frontend-Cockpit ist noch nicht bestätigt (Port 4000 nicht erreichbar).'
+      Write-Warn 'Frontend-Cockpit ist noch nicht bestätigt (Port 4000 nicht erreichbar nach 20 Sekunden).'
     }
   }
 
@@ -481,9 +527,24 @@ Write-Section 'Naechste Schritte'
 Write-Host '  1. Frontend-Cockpit:  http://localhost:4000' -ForegroundColor Cyan
 Write-Host '  2. Prozess starten:   npm run trigger:email' -ForegroundColor White
 Write-Host '  3. Tasklist oeffnen:  https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e' -ForegroundColor White
-Write-Host '  4. Alles stoppen:     .\Stop-Server.ps1' -ForegroundColor White
+Write-Host '  4. Alles stoppen:     Cockpit "Herunterfahren" — oder STRG+C hier' -ForegroundColor White
 
 Write-Host ''
 Write-Host 'Start abgeschlossen.' -ForegroundColor Green
 
 Save-ServerState -Services $runtimeServices
+
+if (-not $NoWait) {
+  Write-Host ''
+  Write-Host 'System laeuft. Im Cockpit "Herunterfahren" klicken oder hier STRG+C druecken.' -ForegroundColor Cyan
+
+  $flagFile = Join-Path $scriptRoot '.runtime\shutdown-requested'
+  while (-not (Test-Path $flagFile)) {
+    Start-Sleep -Seconds 1
+  }
+  Remove-Item $flagFile -ErrorAction SilentlyContinue
+
+  Write-Host ''
+  Write-Host 'Shutdown angefordert — fahre System herunter...' -ForegroundColor Yellow
+  & "$scriptRoot\Stop-Server.ps1"
+}

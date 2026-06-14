@@ -87,6 +87,13 @@ async function triggerScenario(scenario) {
       showToast(`${displayName} wurde erfolgreich gestartet.`, 'success');
       console.log(`[${scenario}] Output:`, data.output);
       console.log(`[${scenario}] Case ID:`, data.caseId);
+
+      // Öffne Operate-Detailseite dieser Prozessinstanz
+      if (data.processInstanceKey) {
+        const operateUrl = `${config.camunda.urls.operate}/processes/${data.processInstanceKey}`;
+        window.open(operateUrl, '_blank');
+        console.log(`[${scenario}] Operate URL:`, operateUrl);
+      }
     } else {
       showStatus(`❌ Fehler: ${data.error}`, 'error');
       showToast(`Fehler: ${data.error}`, 'error');
@@ -111,7 +118,7 @@ function openURL(url) {
  * Handle Shutdown (mit Bestätigung)
  */
 async function handleShutdown() {
-  const confirmed = confirm('Wirklich das System herunterfahren? Browser und Services werden beendet.');
+  const confirmed = confirm('Wirklich das System herunterfahren? Das Fenster wird geschlossen.');
   if (!confirmed) return;
 
   shutdownBtn.disabled = true;
@@ -123,17 +130,8 @@ async function handleShutdown() {
 
     if (data.success) {
       console.log('[Shutdown] Server antwortet mit:', data);
-
-      // Versuche Fenster zu schließen nach kurzer Verzögerung
-      setTimeout(() => {
-        const closed = window.close();
-
-        // Fallback: Falls window.close() blockiert wurde
-        if (!closed) {
-          showToast('System wurde heruntergefahren — Sie können dieses Fenster jetzt schließen.', 'success');
-          alert('System wurde heruntergefahren.\n\nSie können dieses Fenster jetzt schließen (Alt+F4 oder X-Button).');
-        }
-      }, 500);
+      showToast('Fenster wird geschlossen...', 'success');
+      // Fenster wird von Stop-Server.ps1 geschlossen (mit Profil-Verifikation)
     }
   } catch (error) {
     console.error('[Shutdown] Fehler:', error);
@@ -200,6 +198,8 @@ function switchMode(mode) {
  */
 async function refreshEventLog() {
   try {
+    const isAtBottom = eventLog.scrollHeight - eventLog.scrollTop - eventLog.clientHeight < 50;
+
     const response = await fetch(`/api/event-log?mode=${currentMode}`);
     const data = await response.json();
 
@@ -241,8 +241,9 @@ async function refreshEventLog() {
       eventLog.appendChild(eventItem);
     });
 
-    // Scrolle nach unten (neueste Ereignisse unten)
-    eventLog.scrollTop = eventLog.scrollHeight;
+    if (isAtBottom) {
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
   } catch (error) {
     console.error('[Event-Log] Fehler:', error);
   }
