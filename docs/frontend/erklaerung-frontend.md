@@ -15,6 +15,31 @@ Es bietet:
 
 ---
 
+## Bekannte Einschränkungen
+
+### Browser-Fenster Shutdown
+
+Das Cockpit-Fenster wird **NICHT automatisch geschlossen** wenn `Stop-Server.ps1` aufgerufen wird. Das ist **absichtlich und sicher**:
+
+**Grund:** 
+- Browser-Prozesse spawnen mehrere Child-Prozesse (Tabs, GPU, Network, Sandbox)
+- Start-Process gibt die Launcher-PID zurück, nicht den Hauptprozess
+- Eine zuverlässige PID-Verfolgung über den gesamten Lifecycle ist fehleranfällig
+- Der ursprüngliche Bug (msedgewebview2.exe Killschlag) zeigt die Gefahren
+
+**Sicherheits-Ansatz stattdessen:**
+- ✅ Nur die gespeicherte PID wird je gekilled (nicht Pattern-Matches)
+- ✅ CommandLine wird vor dem Kill verifiziert (--user-data-dir Flag)
+- ✅ Keine anderen Prozesse (WebView2, Teams, WhatsApp) können getötet werden
+- ⚠️ **Nutzer muss Cockpit-Fenster manuell schließen** (alt+F4 oder X-Button)
+
+**Warum das ok ist:**
+- Das ist ein Demo-Tool, kein Production-Browser
+- Der Node.js Server wird sauber heruntergefahren
+- Offene Fenster können nicht versehentlich andere Apps killen
+
+---
+
 ## Architektur
 
 ### Express-Server (`frontend/server.js`)
