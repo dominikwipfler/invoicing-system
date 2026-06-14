@@ -2,9 +2,10 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs   = require('fs');
 
+// ERP_URL kann per .env überschrieben werden (z.B. für lokale ERP-Instanz)
 const ERP_URL        = process.env.ERP_URL || 'https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html';
 const SCREENSHOTS_DIR = path.join(__dirname, 'screenshots');
-// RPA_HEADLESS=false → sichtbarer Browser (gut für Demo / Präsentation)
+// RPA_HEADLESS=false → sichtbarer Browser mit slowMo (gut für Demo / Präsentation)
 const HEADLESS       = process.env.RPA_HEADLESS !== 'false';
 
 function normalizeDate(raw) {
