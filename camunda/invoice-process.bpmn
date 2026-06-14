@@ -212,7 +212,7 @@
     <bpmn:userTask id="Task_Validate" name="Rechnung&#10;prüfen und validieren">
       <bpmn:extensionElements>
         <zeebe:userTask/>
-        <zeebe:formDefinition formId="freigabe"/>
+        <zeebe:formDefinition formId="validierung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_ValidateJoin_Validate</bpmn:incoming>
       <bpmn:outgoing>Flow_Validate_GWDecision</bpmn:outgoing>
@@ -240,7 +240,7 @@
     <bpmn:userTask id="Task_Compliance" name="Compliance&#10;Check">
       <bpmn:extensionElements>
         <zeebe:userTask/>
-        <zeebe:formDefinition formId="freigabe"/>
+        <zeebe:formDefinition formId="compliance-check"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_GW2_Check</bpmn:incoming>
       <bpmn:outgoing>Flow_Compliance_Decision</bpmn:outgoing>
@@ -273,7 +273,7 @@
     <bpmn:userTask id="Task_RequestInfo" name="Info beim&#10;Lieferanten anfragen">
       <bpmn:extensionElements>
         <zeebe:userTask/>
-        <zeebe:formDefinition formId="rechnungserfassung"/>
+        <zeebe:formDefinition formId="info-lieferant"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_GW3_Request</bpmn:incoming>
       <bpmn:outgoing>Flow_Request_Receive</bpmn:outgoing>
@@ -282,7 +282,10 @@
     <bpmn:userTask id="Task_ReceiveInfo" name="Info vom&#10;Lieferanten erhalten">
       <bpmn:extensionElements>
         <zeebe:userTask/>
-        <zeebe:formDefinition formId="rechnungserfassung"/>
+        <zeebe:formDefinition formId="info-lieferant"/>
+        <zeebe:ioMapping>
+          <zeebe:output source="=false" target="infoNeeded"/>
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Request_Receive</bpmn:incoming>
       <bpmn:outgoing>Flow_ReceiveInfo_ValidateJoin</bpmn:outgoing>
