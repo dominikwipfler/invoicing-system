@@ -1,5 +1,5 @@
 {
-  "id": "freigabe",
+  "id": "compliance-check",
   "schemaVersion": 12,
   "exporter": {
     "name": "Camunda Forms",
@@ -10,12 +10,12 @@
     {
       "type": "text",
       "id": "Text_Header",
-      "text": "### Rechnungsfreigabe\nBitte prüfen Sie die erfassten Rechnungsdaten und erteilen Sie die Freigabe oder lehnen Sie die Rechnung ab.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
+      "text": "### Compliance Check\nDie Rechnung überschreitet den Compliance-Schwellenwert von 10.000 €. Bitte prüfen Sie die Rechnung und erteilen Sie die Compliance-Freigabe.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
     },
     {
       "type": "text",
       "id": "Text_Zusammenfassung",
-      "text": "**Rechnungsübersicht**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Rechnungsnummer: `{{invoiceNumber}}`\n- Betrag: `{{amountEuro}} €`\n- Datum: `{{invoiceDate}}`\n- ERP-Referenz: `{{erpReferenzNummer}}`"
+      "text": "**Rechnungsübersicht**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Rechnungsnummer: `{{invoiceNumber}}`\n- Betrag: `{{amountEuro}} €`\n- Datum: `{{invoiceDate}}`"
     },
     {
       "type": "radio",
@@ -26,15 +26,15 @@
         "required": true
       },
       "values": [
-        { "label": "Freigabe erteilen — Zahlung veranlassen", "value": "genehmigt" },
-        { "label": "Rechnung ablehnen — Prozess beenden",     "value": "abgelehnt" }
+        { "label": "Compliance-Freigabe erteilen", "value": "genehmigt" },
+        { "label": "Compliance abgelehnt — Prozess beenden", "value": "abgelehnt" }
       ]
     },
     {
       "type": "textfield",
       "id": "Field_freigebenderName",
       "key": "freigebenderName",
-      "label": "Ihr Name (Freigebende Person)",
+      "label": "Ihr Name (Compliance Officer)",
       "validate": {
         "required": true
       }

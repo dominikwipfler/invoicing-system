@@ -1,0 +1,50 @@
+{
+  "id": "info-lieferant",
+  "schemaVersion": 12,
+  "exporter": {
+    "name": "Camunda Forms",
+    "version": "0.12.0"
+  },
+  "type": "default",
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_Header",
+      "text": "### Information beim Lieferanten\nBitte kontaktieren Sie den Lieferanten und dokumentieren Sie die Kommunikation."
+    },
+    {
+      "type": "text",
+      "id": "Text_Zusammenfassung",
+      "text": "**Rechnungsübersicht**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Rechnungsnummer: `{{invoiceNumber}}`\n- Betrag: `{{amountEuro}} €`\n- Datum: `{{invoiceDate}}`\n- Eingangskanal: `{{eingangskanal}}`"
+    },
+    {
+      "type": "textfield",
+      "id": "Field_lieferantEmail",
+      "key": "lieferantEmail",
+      "label": "E-Mail des Lieferanten",
+      "validate": {
+        "required": false
+      }
+    },
+    {
+      "type": "datetime",
+      "id": "Field_kontaktDatum",
+      "key": "kontaktDatum",
+      "label": "Kontaktdatum",
+      "subtype": "date",
+      "dateLabel": "Datum wählen",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "Field_infoKommentar",
+      "key": "infoKommentar",
+      "label": "Kommentar / erhaltene Information",
+      "validate": {
+        "required": true
+      }
+    }
+  ]
+}

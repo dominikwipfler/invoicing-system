@@ -81,43 +81,35 @@ const INVOICE_HTML = `<!DOCTYPE html>
       <tr>
         <td>1</td>
         <td>Softwareentwicklung – Backend-API Sprint Mai</td>
-        <td>80</td>
+        <td>20</td>
         <td>Std.</td>
-        <td style="text-align:right">125,00</td>
-        <td>10.000,00</td>
+        <td style="text-align:right">95,00</td>
+        <td>1.900,00</td>
       </tr>
       <tr>
         <td>2</td>
         <td>Konzeption und technische Dokumentation</td>
-        <td>16</td>
+        <td>8</td>
         <td>Std.</td>
         <td style="text-align:right">110,00</td>
-        <td>1.760,00</td>
+        <td>880,00</td>
       </tr>
       <tr>
         <td>3</td>
         <td>Cloud-Infrastruktur (AWS) Mai 2026</td>
         <td>1</td>
         <td>Monat</td>
-        <td style="text-align:right">890,00</td>
-        <td>890,00</td>
-      </tr>
-      <tr>
-        <td>4</td>
-        <td>Lizenzgebühren Entwicklungstools (quartalsweise)</td>
-        <td>1</td>
-        <td>Pauschal</td>
-        <td style="text-align:right">350,00</td>
-        <td>350,00</td>
+        <td style="text-align:right">290,00</td>
+        <td>290,00</td>
       </tr>
     </tbody>
   </table>
 
   <div class="totals">
     <table>
-      <tr><td>Nettobetrag:</td><td>13.000,00 €</td></tr>
-      <tr><td>Mehrwertsteuer 19%:</td><td>2.470,00 €</td></tr>
-      <tr class="total-row"><td>Gesamtbetrag:</td><td>15.470,00 €</td></tr>
+      <tr><td>Nettobetrag:</td><td>3.070,00 €</td></tr>
+      <tr><td>Mehrwertsteuer 19%:</td><td>583,30 €</td></tr>
+      <tr class="total-row"><td>Gesamtbetrag:</td><td>3.653,30 €</td></tr>
     </table>
   </div>
 
@@ -154,7 +146,7 @@ async function createTestInvoice() {
   console.log('Rechnungsdaten:');
   console.log('  Lieferant:        TechSolutions GmbH');
   console.log('  Rechnungsnummer:  RE-2026-0748');
-  console.log('  Betrag (brutto):  15.470,00 EUR');
+  console.log('  Betrag (brutto):  3.653,30 EUR');
   console.log('  Datum:            2026-06-07');
 }
 

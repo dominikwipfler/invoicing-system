@@ -312,6 +312,8 @@ invoicing-system/
 | `npm run check:grpc` | gRPC Verbindung testen |
 | `npm run check:messaging` | RabbitMQ + Zahlungsfluss testen |
 | `npm run check:integration` | Beide Checks hintereinander |
+| `npm run docker:up` | RabbitMQ Docker-Container starten |
+| `npm run docker:down` | RabbitMQ Docker-Container stoppen |
 
 ---
 
@@ -547,3 +549,5 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 | Task haengt in Operate | Operate → Instanz → Modify → Token verschieben |
 | Formular fehlt im Tasklist | BPMN + alle Formulare zusammen neu in Camunda deployen |
 | RPA-Bot schlaegt fehl | `npm run rpa:test` zum isolierten Testen; `RPA_HEADLESS=false` fuer sichtbare Ausfuehrung |
+| Compliance-Check wird uebersprungen | BPMN neu deployen: `npm run deploy:bpmn` — complianceNeeded muss in Task_gRPC outputParameters stehen |
+| Info-Schleife laeuft endlos | freigabe.form: infoNeeded Checkbox muss beim zweiten Durchlauf abgehakt werden (defaultValue=false) |

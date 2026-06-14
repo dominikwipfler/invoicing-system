@@ -10,7 +10,7 @@
     {
       "type": "text",
       "id": "Text_Header",
-      "text": "### KI-Extraktion prüfen und korrigieren\nDie KI hat die folgenden Rechnungsdaten aus dem PDF extrahiert. Bitte prüfen Sie die Werte und korrigieren Sie sie bei Bedarf. Die KI-Konfidenz war unter dem Schwellenwert von 80%."
+      "text": "### KI-Extraktion prüfen und korrigieren\nDie KI hat die folgenden Rechnungsdaten aus dem PDF extrahiert. Bitte prüfen Sie die Werte und korrigieren Sie sie bei Bedarf. Die KI-Konfidenz war unter dem Schwellenwert von 80%.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
     },
     {
       "type": "group",

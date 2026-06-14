@@ -9,6 +9,7 @@ const config = require('./config.json');
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/invoices', express.static(path.join(__dirname, '..', 'ai-agent')));
 
 const PORT = config.server.port;
 const projectRoot = path.join(__dirname, '..');

@@ -327,11 +327,12 @@ body {
 /* ─────────────────────────────────────────────────────────────────── */
 
 .status-message {
-  margin-top: var(--sp-md);
-  padding: var(--sp-md);
+  margin-top: var(--sp-lg);
+  padding: var(--sp-md) var(--sp-lg);
   border-radius: var(--radius-md);
   display: none;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
+  font-weight: 500;
 }
 
 .status-message.show {
@@ -474,6 +475,51 @@ body {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* PROCESS HISTORY */
+/* ─────────────────────────────────────────────────────────────────── */
+
+.process-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--sp-md);
+  align-items: center;
+  padding: var(--sp-sm) var(--sp-md);
+  background-color: var(--color-bg-dark);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+}
+
+.history-scenario {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.history-case {
+  color: var(--color-text-light);
+  font-family: 'Courier New', monospace;
+}
+
+.history-time {
+  color: var(--color-text-light);
+  white-space: nowrap;
+}
+
+.history-empty {
+  color: var(--color-text-light);
+  font-style: italic;
+  font-size: var(--fs-sm);
+  text-align: center;
+  padding: var(--sp-md);
 }
 
 /* ─────────────────────────────────────────────────────────────────── */

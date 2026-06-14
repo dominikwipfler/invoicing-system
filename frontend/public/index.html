@@ -24,7 +24,8 @@
       <p class="card-subtitle">Wähle ein Testszenario, um einen Prozess zu starten</p>
 
       <div class="button-group">
-        <button id="trigger-standard" class="btn btn-primary btn-large">
+        <button id="trigger-standard" class="btn btn-primary btn-large"
+          title="Startet test-invoice.pdf — hohe KI-Konfidenz, Betrag unter 10.000 €, kein Compliance-Check">
           <span class="btn-icon">▶</span>
           <span class="btn-text">
             <strong>Standard-Rechnung</strong>
@@ -32,11 +33,12 @@
           </span>
         </button>
 
-        <button id="trigger-compliance" class="btn btn-warning btn-large">
+        <button id="trigger-compliance" class="btn btn-warning btn-large"
+          title="Startet test-invoice-2.pdf — Betrag 52.360 €, löst Compliance-Check aus">
           <span class="btn-icon">⚠</span>
           <span class="btn-text">
             <strong>Compliance-Fall</strong>
-            <span class="btn-description">Hoher Betrag, KI-Prüfung erforderlich</span>
+            <span class="btn-description">Hoher Betrag (52.360 €), Compliance-Check erforderlich</span>
           </span>
         </button>
       </div>
@@ -66,7 +68,16 @@
       </div>
     </div>
 
-    <!-- Karte 3: Navigation -->
+    <!-- Karte 3: Prozess-History -->
+    <div class="card">
+      <h2>Letzte Prozesse</h2>
+      <p class="card-subtitle">Die letzten 5 gestarteten Prozesse (gespeichert im Browser)</p>
+      <div id="process-history" class="process-history">
+        <p class="history-empty">Noch keine Prozesse gestartet.</p>
+      </div>
+    </div>
+
+    <!-- Karte 4: Navigation -->
     <div class="card">
       <h2>Navigation</h2>
       <p class="card-subtitle">Öffne Camunda Tasklist oder Operate in neuem Fenster</p>
