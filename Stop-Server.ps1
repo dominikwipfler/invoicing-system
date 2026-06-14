@@ -158,7 +158,6 @@ else {
 
   Write-Step '1/5' 'Frontend-Cockpit beenden'
   $frontendService = $state.Services | Where-Object { $_.Name -eq 'Frontend-Cockpit' } | Select-Object -First 1
-  $pidFilePath = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '.runtime' 'frontend-browser.pid'
 
   if ($frontendService) {
     # Versuche API Shutdown
@@ -179,32 +178,6 @@ else {
     }
   } else {
     Stop-NodeByScriptPattern -Pattern 'frontend[\\/]server\.js' -Label 'Frontend-Cockpit'
-  }
-
-  # Beende Browser (nur wenn PID-Datei und Prozess existiert)
-  if (Test-Path $pidFilePath) {
-    try {
-      $browserPidStr = Get-Content $pidFilePath -Raw -ErrorAction SilentlyContinue
-      if ($browserPidStr -and [int]::TryParse($browserPidStr.Trim(), [ref]$browserPid)) {
-        $browserProcess = Get-Process -Id $browserPid -ErrorAction SilentlyContinue
-        if ($browserProcess) {
-          # Verifiziere dass es msedge oder chrome ist (ProcessName, NICHT Pattern-Matching)
-          if ($browserProcess.ProcessName -eq 'msedge' -or $browserProcess.ProcessName -eq 'chrome') {
-            # Optional: Verifiziere dass unsere Flags in der CommandLine sind
-            $cmdLine = $browserProcess.CommandLine
-            if ($cmdLine -and ($cmdLine -match '--user-data-dir' -or $cmdLine -match '--no-first-run')) {
-              Stop-Process -Id $browserPid -Force -ErrorAction SilentlyContinue
-              Write-Success 'Browser-Fenster geschlossen.'
-            } else {
-              Write-Warn "Browser PID $browserPid hat nicht erwartete CommandLine - ignoriert (Sicherheit)."
-            }
-          } else {
-            Write-Warn "PID $browserPid ist nicht msedge/chrome ($($browserProcess.ProcessName)) - ignoriert."
-          }
-        }
-      }
-    } catch { }
-    Remove-Item $pidFilePath -Force -ErrorAction SilentlyContinue
   }
 
   Write-Step '2/5' 'gRPC Service beenden'

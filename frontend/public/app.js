@@ -1,3 +1,27 @@
+// ── THEME MANAGEMENT ──────────────────────────────────────────────
+function initTheme() {
+  // Lade gespeichertes Theme oder Standard
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+
+  // Update Toggle-Button Icon
+  const toggleBtn = document.getElementById('theme-toggle-btn');
+  if (toggleBtn) {
+    toggleBtn.textContent = theme === 'light' ? '🌙' : '☀️';
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = current === 'light' ? 'dark' : 'light';
+  setTheme(newTheme);
+}
+
 // ── KONFIGURATION LADEN ───────────────────────────────────────────
 let config = {
   camunda: {
@@ -99,12 +123,17 @@ async function handleShutdown() {
 
     if (data.success) {
       console.log('[Shutdown] Server antwortet mit:', data);
-      // Browser wird automatisch nach kurzer Zeit geschlossen
-      // Falls nicht: zeige Meldung
+
+      // Versuche Fenster zu schließen nach kurzer Verzögerung
       setTimeout(() => {
-        alert('Server wurde beendet. Browser-Fenster wird geschlossen.');
-        window.close();
-      }, 2000);
+        const closed = window.close();
+
+        // Fallback: Falls window.close() blockiert wurde
+        if (!closed) {
+          showToast('System wurde heruntergefahren — Sie können dieses Fenster jetzt schließen.', 'success');
+          alert('System wurde heruntergefahren.\n\nSie können dieses Fenster jetzt schließen (Alt+F4 oder X-Button).');
+        }
+      }, 500);
     }
   } catch (error) {
     console.error('[Shutdown] Fehler:', error);
@@ -227,12 +256,18 @@ setInterval(refreshEventLog, 2000);
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[App] Starte Initialisierung...');
 
+  // Initialisiere Theme (vor anderen Elementen)
+  initTheme();
+
   // Registriere Event-Listener (MUSS nach DOM vollständig geladen sein)
   triggerStandardBtn.addEventListener('click', () => triggerScenario('standard'));
   triggerComplianceBtn.addEventListener('click', () => triggerScenario('compliance'));
   openTasklistBtn.addEventListener('click', () => openURL(config.camunda.urls.tasklist));
   openOperateBtn.addEventListener('click', () => openURL(config.camunda.urls.operate));
   shutdownBtn.addEventListener('click', handleShutdown);
+
+  // Theme Toggle Listener
+  document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
 
   // Mode Toggle Listener
   modeToggle.forEach(btn => {

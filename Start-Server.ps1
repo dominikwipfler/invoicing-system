@@ -414,66 +414,10 @@ if ($existingFrontend) {
     if ($frontendReady) {
       Write-Success 'Frontend-Cockpit ist auf Port 4000 erreichbar.'
 
-      # Öffne Browser mit separatem Profil (erzwingt unabhängigen Prozessbaum)
-      Write-Info 'Öffne Browser-Fenster mit eigenem Profil...'
-      $browserPaths = @(
-        'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-        'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
-        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-        'C:\Program Files\Google\Chrome\Application\chrome.exe'
-      )
-
-      $browserPath = $null
-      foreach ($path in $browserPaths) {
-        if (Test-Path $path) {
-          $browserPath = $path
-          break
-        }
-      }
-
-      if ($browserPath) {
-        # Erstelle Profil-Verzeichnis (erzwingt neuen Prozess)
-        $profileDir = Join-Path $env:TEMP 'hka-cockpit-profile'
-        if (-not (Test-Path $profileDir)) {
-          New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
-        }
-
-        # Starte Browser mit separatem Profil + Flags
-        $browserArgs = @(
-          '--new-window',
-          '--no-first-run',
-          '--no-default-browser-check',
-          "--user-data-dir=$profileDir",
-          'http://localhost:4000'
-        )
-        $launcherProcess = Start-Process -FilePath $browserPath -ArgumentList $browserArgs -PassThru
-
-        if ($launcherProcess) {
-          # Warte kurz bis der Hauptprozess spawnt (Start-Process gibt Launcher zurück, nicht Hauptprozess)
-          Start-Sleep -Milliseconds 500
-
-          # Finde den Hauptprozess (mit --user-data-dir Flag)
-          $mainBrowser = Get-Process | Where-Object {
-            ($_.ProcessName -eq 'msedge' -or $_.ProcessName -eq 'chrome') -and
-            $_.CommandLine -and
-            $_.CommandLine -match '--user-data-dir'
-          } | Select-Object -First 1
-
-          # Speichere Hauptprozess-PID für späteren Shutdown
-          if ($mainBrowser) {
-            if (-not (Test-Path $runtimeDir)) {
-              New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
-            }
-            $mainBrowser.Id | Out-File -FilePath $pidFilePath -Encoding UTF8 -NoNewline
-            Write-Success "Browser geöffnet mit eigenem Profil (PID $($mainBrowser.Id))."
-            Write-Info "  Profil-Verzeichnis: $profileDir"
-          } else {
-            Write-Warn 'Browser-Hauptprozess konnte nicht identifiziert werden (Shell-Kommando öffnet trotzdem)'
-          }
-        }
-      } else {
-        Write-Warn 'Kein Browser gefunden (Edge/Chrome). Öffne manuell: http://localhost:4000'
-      }
+      # Öffne Browser-Fenster im Standard-Browser
+      Write-Info 'Öffne http://localhost:4000 im Standard-Browser...'
+      Start-Process 'http://localhost:4000'
+      Write-Success 'Browser-Fenster geöffnet.'
     } else {
       Write-Warn 'Frontend-Cockpit ist noch nicht bestätigt (Port 4000 nicht erreichbar).'
     }
