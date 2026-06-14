@@ -10,7 +10,7 @@
     {
       "type": "text",
       "id": "Text_Header",
-      "text": "### Rechnungsfreigabe\nBitte prüfen Sie die erfassten Rechnungsdaten und erteilen Sie die Freigabe oder lehnen Sie die Rechnung ab."
+      "text": "### Rechnungsfreigabe\nBitte prüfen Sie die erfassten Rechnungsdaten und erteilen Sie die Freigabe oder lehnen Sie die Rechnung ab.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
     },
     {
       "type": "text",
@@ -50,6 +50,7 @@
       "id": "Field_infoNeeded",
       "key": "infoNeeded",
       "label": "☑ Information vom Lieferanten erforderlich (optional, nur Task_Validate)",
+      "defaultValue": false,
       "validate": {
         "required": false
       }
