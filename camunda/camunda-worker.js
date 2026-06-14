@@ -66,6 +66,7 @@ function normalizeDate(raw) {
 }
 
 // ── Camunda 8 Worker ──────────────────────────────────────────────────────────
+// Verbindet sich mit Camunda 8 SaaS via Zeebe gRPC (Credentials aus .env)
 const c8  = new Camunda8();
 const zbc = c8.getZeebeGrpcApiClient();
 
@@ -106,8 +107,8 @@ zbc.createWorker({
       console.log(`[grpc-save-invoice] ${invoiceId} gespeichert — dataComplete=${dataComplete}, ${amountCents} Cent`);
       logEvent(invoiceId, 'gRPC Save Success', 'camunda-worker');
 
-      // Berechne: Compliance Check nötig? (ab 10.000 EUR)
-      const complianceNeeded = amountEuro >= 10000;
+      // Berechne: Compliance Check nötig? (ab 10.000 EUR) — parseFloat sichert Typkonvertierung
+      const complianceNeeded = parseFloat(amountEuro) >= 10000;
 
       // Berechne: Info vom Lieferanten nötig? (standardmäßig false, kann von Sachbearbeiter im Formular gesetzt werden)
       // Wird initialerweise auf false gesetzt, kann aber im Task_Validate überschrieben werden
@@ -278,5 +279,12 @@ zbc.createWorker({
   },
 });
 
-console.log('Camunda Worker läuft – abonnierte Tasks: receive-invoice, ai-extract-invoice, grpc-save-invoice, rabbitmq-payment, archive-invoice, rpa-erp-entry');
-console.log(`RPA-Modus: Playwright (direkt, kein UiPath) | KI-Konfidenz-Schwelle: ${CONFIDENCE_THRESHOLD * 100}%`);
+console.log('╔══════════════════════════════════════════════════════════╗');
+console.log('║  Camunda Worker gestartet                                ║');
+console.log('║  Tasks: receive-invoice, ai-extract-invoice,             ║');
+console.log('║         grpc-save-invoice, rabbitmq-payment,             ║');
+console.log('║         archive-invoice, rpa-erp-entry                   ║');
+console.log('╚══════════════════════════════════════════════════════════╝');
+console.log(`  RPA-Modus  : Playwright (kein UiPath — siehe docs/uipath-research.md)`);
+console.log(`  KI-Provider: ${process.env.AI_PROVIDER || 'n8n'} | Konfidenz-Schwelle: ${CONFIDENCE_THRESHOLD * 100}%`);
+console.log(`  gRPC       : ${process.env.GRPC_ADDRESS || '127.0.0.1:50051'}`);

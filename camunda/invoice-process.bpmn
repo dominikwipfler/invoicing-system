@@ -141,9 +141,11 @@
           <zeebe:input source="=invoiceNumber" target="invoiceNumber"/>
           <zeebe:input source="=amountEuro"    target="amountEuro"/>
           <zeebe:input source="=invoiceDate"   target="invoiceDate"/>
-          <zeebe:output source="=grpcSuccess"  target="grpcSuccess"/>
-          <zeebe:output source="=amountCents"  target="amountCents"/>
-          <zeebe:output source="=dataComplete" target="dataComplete"/>
+          <zeebe:output source="=grpcSuccess"      target="grpcSuccess"/>
+          <zeebe:output source="=amountCents"      target="amountCents"/>
+          <zeebe:output source="=dataComplete"     target="dataComplete"/>
+          <zeebe:output source="=complianceNeeded" target="complianceNeeded"/>
+          <zeebe:output source="=infoNeeded"       target="infoNeeded"/>
         </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_KI_Join_gRPC</bpmn:incoming>
