@@ -21,6 +21,13 @@ const scenarios = {
     from: 'nordwind@beispiel.de',
     subject: 'Rechnung RE-2026-1102 von Nordwind IT Consulting GmbH',
     description: 'Compliance-Szenario: niedrige KI-Konfidenz, Betrag > 10.000€, triggert KI-Prüfung + Compliance'
+  },
+  manual: {
+    pdf: 'test-invoice.pdf',
+    from: 'support@beispiel.de',
+    subject: 'Rechnung zur manuellen Korrektur (Demo)',
+    description: 'Manuelle Korrektur: forciere niedrige KI-Konfidenz (0%) → Sachbearbeiter muss Daten prüfen und korrigieren',
+    forceLowConfidence: true  // Flag für Worker: ignoriere echte KI-Extraktion, setze alle Felder auf null + confidence=0
   }
 };
 
@@ -39,6 +46,7 @@ const emailVariables = {
   emailReceivedAt: new Date().toISOString(),
   eingangskanal:   'email',
   pdfPath,
+  ...(scenario.forceLowConfidence ? { forceLowConfidence: true } : {}),
   ...(process.env.INVOICE_ID ? { invoiceId: process.env.INVOICE_ID } : {}),
 };
 

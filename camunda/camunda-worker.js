@@ -88,11 +88,15 @@ zbc.createWorker({
 zbc.createWorker({
   taskType: 'grpc-save-invoice',
   taskHandler: async (job) => {
-    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate } = job.variables;
+    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate, aiConfidence } = job.variables;
 
-    // Prüfen ob alle Pflichtfelder vorhanden sind
-    const dataComplete = !!(invoiceId && supplierName && invoiceNumber && amountEuro && invoiceDate);
-    const amountCents  = Math.round(parseFloat(amountEuro || 0) * 100);
+    // Prüfen ob alle Pflichtfelder vorhanden sind UND KI-Konfidenz ausreichend
+    const hasMinConfidence = aiConfidence !== undefined ? parseFloat(aiConfidence) >= 0.5 : false;
+    const allFieldsPresent = !!(invoiceId && supplierName && invoiceNumber && amountEuro && invoiceDate);
+    const dataComplete = allFieldsPresent && hasMinConfidence;
+
+    // amountCents: verwende 0 wenn null/undefined, nicht eine Garbage-Zahl
+    const amountCents = amountEuro ? Math.round(parseFloat(amountEuro) * 100) : 0;
 
     const invoicePayload = {
       id:             String(invoiceId),
@@ -179,13 +183,29 @@ const AI_PROVIDER = process.env.AI_PROVIDER || 'n8n';
 zbc.createWorker({
   taskType: 'ai-extract-invoice',
   taskHandler: async (job) => {
-    const { invoiceId, pdfPath } = job.variables;
+    const { invoiceId, pdfPath, forceLowConfidence } = job.variables;
     const defaultPdfPath = path.join(__dirname, '..', 'ai-agent', 'test-invoice.pdf');
     const targetPath = pdfPath || defaultPdfPath;
     const mockMode = process.env.AI_MOCK_MODE === 'true';
 
     console.log(`[ai-extract-invoice] Starte KI-Extraktion für ${invoiceId} — Provider: ${mockMode ? 'MOCK' : AI_PROVIDER} — PDF: ${targetPath}`);
     logEvent(invoiceId, 'AI Extraction Started', mockMode ? 'mock' : AI_PROVIDER);
+
+    // Demo-Szenario: forceLowConfidence Flag ignoriert echte Extraktion
+    if (forceLowConfidence) {
+      console.log(`[ai-extract-invoice] Erzwinge niedrige Konfidenz für Demo (forceLowConfidence=true)`);
+      logEvent(invoiceId, 'AI Extraction Done (force demo: low confidence)', 'demo');
+      return job.complete({
+        supplierName:        null,
+        invoiceNumber:       null,
+        amountEuro:          null,
+        invoiceDate:         null,
+        lineItems:           [],
+        aiConfidence:        0,
+        requiresHumanReview: true,
+        aiExtractionDone:    true,
+      });
+    }
 
     if (!mockMode && !fs.existsSync(targetPath)) {
       console.warn(`[ai-extract-invoice] PDF nicht gefunden: ${targetPath} — Weiterleitung zur manuellen Prüfung`);

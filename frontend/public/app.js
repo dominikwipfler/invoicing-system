@@ -46,6 +46,7 @@ async function loadConfig() {
 // ── ELEMENT-REFERENZEN ─────────────────────────────────────────────
 const triggerStandardBtn = document.getElementById('trigger-standard');
 const triggerComplianceBtn = document.getElementById('trigger-compliance');
+const triggerManualBtn = document.getElementById('trigger-manual');
 const openTasklistBtn = document.getElementById('open-tasklist');
 const openOperateBtn = document.getElementById('open-operate');
 const shutdownBtn = document.getElementById('shutdown-btn');
@@ -99,17 +100,29 @@ function renderHistory() {
 // ── FUNKTIONEN ─────────────────────────────────────────────────────
 
 /**
- * Trigger ein Testszenario (standard oder compliance)
+ * Trigger ein Testszenario (standard, compliance oder manual)
  */
 async function triggerScenario(scenario) {
   const endpoint = `/api/trigger/${scenario}`;
-  const displayName = scenario === 'standard' ? 'Standard-Rechnung' : 'Compliance-Fall';
+  const displayNames = {
+    standard: 'Standard-Rechnung',
+    compliance: 'Compliance-Fall',
+    manual: 'Manuelle Korrektur'
+  };
+  const displayName = displayNames[scenario] || scenario;
 
   // UI: Zeige Lade-Status + Spinner auf dem angeklickten Button
   showStatus(`Starte ${displayName}...`, 'loading');
   triggerStandardBtn.disabled = true;
   triggerComplianceBtn.disabled = true;
-  const activeBtn = scenario === 'standard' ? triggerStandardBtn : triggerComplianceBtn;
+  triggerManualBtn.disabled = true;
+
+  const buttonMap = {
+    standard: triggerStandardBtn,
+    compliance: triggerComplianceBtn,
+    manual: triggerManualBtn
+  };
+  const activeBtn = buttonMap[scenario];
   const originalIcon = activeBtn.querySelector('.btn-icon').textContent;
   activeBtn.querySelector('.btn-icon').innerHTML = '<span class="spinner"></span>';
 
@@ -118,6 +131,9 @@ async function triggerScenario(scenario) {
     const data = await response.json();
 
     if (data.success) {
+      // Überschreibe lokal generierte Case-ID mit der vom Backend bestätigten
+      lastTriggeredCaseId = data.caseId;
+
       // Wechsle automatisch zu Live-Modus
       switchMode('live');
 
@@ -147,6 +163,7 @@ async function triggerScenario(scenario) {
   } finally {
     triggerStandardBtn.disabled = false;
     triggerComplianceBtn.disabled = false;
+    triggerManualBtn.disabled = false;
     activeBtn.querySelector('.btn-icon').textContent = originalIcon;
   }
 }
@@ -244,7 +261,7 @@ async function refreshEventLog() {
   try {
     const isAtBottom = eventLog.scrollHeight - eventLog.scrollTop - eventLog.clientHeight < 50;
 
-    const response = await fetch(`/api/event-log?mode=${currentMode}`);
+    const response = await fetch(`/api/process-activity?mode=${currentMode}`);
     const data = await response.json();
 
     // Update case_id indicator
@@ -307,6 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Registriere Event-Listener (MUSS nach DOM vollständig geladen sein)
   triggerStandardBtn.addEventListener('click', () => triggerScenario('standard'));
   triggerComplianceBtn.addEventListener('click', () => triggerScenario('compliance'));
+  triggerManualBtn.addEventListener('click', () => triggerScenario('manual'));
   openTasklistBtn.addEventListener('click', () => openURL(config.camunda.urls.tasklist));
   openOperateBtn.addEventListener('click', () => openURL(config.camunda.urls.operate));
   shutdownBtn.addEventListener('click', handleShutdown);

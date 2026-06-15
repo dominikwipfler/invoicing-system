@@ -41,7 +41,15 @@ async function extractInvoiceDataViaN8n(pdfPath, invoiceId) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const responseText = await response.text();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseErr) {
+      console.error(`[invoice-extractor-n8n] JSON-Parse-Fehler: ${parseErr.message}`);
+      console.error(`[invoice-extractor-n8n] Raw Response: "${responseText}"`);
+      throw new Error(`JSON-Parse-Fehler: ${parseErr.message} (Raw: "${responseText.substring(0, 100)}")`);
+    }
 
     // Validierung der Response-Struktur
     if (

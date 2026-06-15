@@ -68,6 +68,7 @@ app.post('/api/trigger/standard', async (req, res) => {
       encoding: 'utf-8',
       timeout: 60000,
       env: { ...process.env, INVOICE_ID: caseId },
+      stdio: ['pipe', 'pipe', 'pipe'],  // Wichtig: stdin/stdout/stderr explizit auf pipes
     });
     const keyMatch = result.match(/Process Instance Key:\s+(\d+)/);
     const processInstanceKey = keyMatch ? keyMatch[1] : null;
@@ -92,6 +93,7 @@ app.post('/api/trigger/compliance', async (req, res) => {
       encoding: 'utf-8',
       timeout: 60000,
       env: { ...process.env, INVOICE_ID: caseId },
+      stdio: ['pipe', 'pipe', 'pipe'],  // Wichtig: stdin/stdout/stderr explizit auf pipes
     });
     const keyMatch = result.match(/Process Instance Key:\s+(\d+)/);
     const processInstanceKey = keyMatch ? keyMatch[1] : null;
@@ -103,10 +105,35 @@ app.post('/api/trigger/compliance', async (req, res) => {
   }
 });
 
-// GET /api/event-log → Event-Log mit mode Parameter
+// POST /api/trigger/manual → Starte Manuelle-Korrektur-Szenario
+app.post('/api/trigger/manual', async (req, res) => {
+  const caseId = 'INV-' + Date.now();
+  lastTriggeredCaseId = caseId;
+  lastTriggeredAt = new Date().toISOString();
+  logEvent(caseId, 'Trigger Manual', 'frontend');
+  console.log('[API] Triggere Manuelle-Korrektur-Szenario...');
+  try {
+    const result = await runCommand('npm run trigger:email:manual', {
+      cwd: projectRoot,
+      encoding: 'utf-8',
+      timeout: 60000,
+      env: { ...process.env, INVOICE_ID: caseId },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const keyMatch = result.match(/Process Instance Key:\s+(\d+)/);
+    const processInstanceKey = keyMatch ? keyMatch[1] : null;
+    console.log('[API] Manuelle-Korrektur-Szenario gestartet, Key:', processInstanceKey);
+    res.json({ success: true, message: 'Manuelle-Korrektur-Szenario gestartet', caseId, processInstanceKey, output: result });
+  } catch (error) {
+    console.error('[API] Fehler beim Manuelle-Korrektur-Szenario:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/process-activity → Process Activity Feed mit mode Parameter
 // ?mode=live   → nur Events der aktuellen case_id
 // ?mode=history → letzte 15-20 Events (default)
-app.get('/api/event-log', (req, res) => {
+app.get('/api/process-activity', (req, res) => {
   try {
     const mode = req.query.mode || 'history';
 
