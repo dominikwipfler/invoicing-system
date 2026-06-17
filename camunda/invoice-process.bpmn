@@ -101,6 +101,7 @@
           <zeebe:output source="=aiConfidence"      target="aiConfidence"/>
           <zeebe:output source="=requiresHumanReview" target="requiresHumanReview"/>
           <zeebe:output source="=aiExtractionDone"  target="aiExtractionDone"/>
+          <zeebe:output source="=pdfImageDataUri"   target="pdfImageDataUri"/>
         </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Receive_AI</bpmn:incoming>
@@ -118,6 +119,7 @@
     <bpmn:userTask id="Task_KI_Pruefung" name="KI-Extraktion prüfen&#10;und korrigieren">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="sachbearbeiter"/>
         <zeebe:formDefinition formId="ki-pruefung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Conf_Low</bpmn:incoming>
@@ -163,6 +165,7 @@
     <bpmn:userTask id="Task_Fehlerkorrektur" name="gRPC-Fehler prüfen&#10;und Daten korrigieren">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="sachbearbeiter"/>
         <zeebe:formDefinition formId="rechnungserfassung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Boundary_Fehler</bpmn:incoming>
@@ -173,6 +176,7 @@
     <bpmn:userTask id="Task_Register" name="Rechnungsdaten&#10;erfassen">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="sachbearbeiter"/>
         <zeebe:formDefinition formId="rechnungserfassung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Fehlerkorrektur_Register</bpmn:incoming>
@@ -190,6 +194,7 @@
     <bpmn:userTask id="Task_EnterData" name="Fehlende&#10;Rechnungsdaten ergänzen">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="support"/>
         <zeebe:formDefinition formId="rechnungserfassung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_GW1_Enter</bpmn:incoming>
@@ -212,6 +217,7 @@
     <bpmn:userTask id="Task_Validate" name="Rechnung&#10;prüfen und validieren">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="sachbearbeiter"/>
         <zeebe:formDefinition formId="validierung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_ValidateJoin_Validate</bpmn:incoming>
@@ -240,6 +246,7 @@
     <bpmn:userTask id="Task_Compliance" name="Compliance&#10;Check">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="finanzabteilung"/>
         <zeebe:formDefinition formId="compliance-check"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_GW2_Check</bpmn:incoming>
@@ -273,6 +280,7 @@
     <bpmn:userTask id="Task_RequestInfo" name="Info beim&#10;Lieferanten anfragen">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="sachbearbeiter"/>
         <zeebe:formDefinition formId="info-lieferant"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_GW3_Request</bpmn:incoming>
@@ -282,6 +290,7 @@
     <bpmn:userTask id="Task_ReceiveInfo" name="Info vom&#10;Lieferanten erhalten">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="sachbearbeiter"/>
         <zeebe:formDefinition formId="info-lieferant"/>
         <zeebe:ioMapping>
           <zeebe:output source="=false" target="infoNeeded"/>
@@ -295,6 +304,7 @@
     <bpmn:userTask id="Task_Approve" name="Rechnung&#10;freigeben">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="manager"/>
         <zeebe:formDefinition formId="freigabe"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_GW3_Skip</bpmn:incoming>
@@ -340,6 +350,7 @@
     <bpmn:userTask id="Task_ManualERP" name="Rechnungsdaten&#10;manuell ins ERP eingeben">
       <bpmn:extensionElements>
         <zeebe:userTask/>
+        <zeebe:assignmentDefinition candidateGroups="support"/>
         <zeebe:formDefinition formId="erp-bestaetigung"/>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_ERPFehler_Manual</bpmn:incoming>
