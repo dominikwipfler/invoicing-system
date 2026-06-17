@@ -246,7 +246,6 @@ Die folgenden Dateien werden **zur Laufzeit automatisch generiert** und sind **n
 | Datei | Zweck | Generiert von |
 |-------|-------|---------------|
 | `event-log.csv` (root + Service-Dir) | Prozess-Event Log für Process Mining | `logEvent()` in Camunda Worker / Service-Logs |
-| `consolidated-event-log.csv` | Konsolidierte Event-Log über alle Services | `npm run analyze:events` |
 | `rpa/screenshots/*.png` | Screenshots vor/nach ERP-Eingabe (Audit-Trail) | Playwright RPA Bot |
 | `rpa/screenshots/*.webm` | Video der Automatisierung (Demo-Modus) | Playwright RPA Bot |
 
@@ -269,22 +268,42 @@ invoicing-system/
 │   ├── send-payment.js
 │   └── workflow-client.js
 ├── workflow-engine/                # Sprint 3: Eigene Workflow Engine (Port 3001)
-│   └── server.js
-├── camunda/                        # Sprint 4+5: Camunda-Implementierung
+│   ├── server.js
+│   └── event-logger.js
+├── camunda/                        # Sprint 4+5+6: Camunda-Implementierung
 │   ├── invoice-process.bpmn        # BPMN-Prozess (deployed in Camunda)
-│   ├── camunda-worker.js           # External Task Worker (5 Tasks)
+│   ├── camunda-worker.js           # External Task Worker (6 Tasks)
 │   ├── trigger-from-email.js       # E-Mail-Simulation: Prozess starten
+│   ├── deploy-bpmn.js              # BPMN + Formulare deployen
+│   ├── cancel-incidents.js         # Hilfsskript: offene Incidents abbrechen
 │   └── forms/
 │       ├── rechnungserfassung.form
 │       ├── freigabe.form
-│       └── erp-bestaetigung.form
+│       ├── erp-bestaetigung.form
+│       ├── validierung.form
+│       ├── info-lieferant.form
+│       ├── compliance-check.form
+│       └── ki-pruefung.form        # Sprint 6: KI-Extraktion pruefen/korrigieren
+├── ai-agent/                        # Sprint 6: KI-Rechnungsextraktion
+│   ├── invoice-extractor.js        # Provider: Claude API (direkt)
+│   ├── invoice-extractor-n8n.js    # Provider: n8n Webhook + Gemini
+│   ├── create-test-invoice.js      # Test-PDF-Generator
+│   └── test-extract-n8n.js
 ├── rpa/                            # Sprint 5: RPA
 │   ├── rpa-erp-bot.js              # Playwright-Bot
 │   └── screenshots/                # Audit-Trail (nicht in Git)
+├── frontend/                        # Sprint 1-6: Demo-Cockpit (Port 4000)
+│   ├── server.js                   # Express-API fuer Cockpit
+│   ├── config.json
+│   └── public/                     # Dashboard (HTML/CSS/JS)
 ├── docs/
 │   ├── sprint1/erklaerung-sprint1.md
 │   ├── sprint2/erklaerung-sprint2.md
-│   └── sprint3/                    # Soll-Prozess, Zielarchitektur, Optimierungen
+│   ├── sprint3/                    # Soll-Prozess, Zielarchitektur, Optimierungen
+│   ├── sprint4/erklaerung-sprint4.md
+│   ├── sprint5/                    # RPA + UiPath-Anleitung
+│   ├── sprint6/erklaerung-sprint6.md
+│   └── frontend/erklaerung-frontend.md
 ├── proto/invoice.proto             # gRPC Schnittstellendefinition
 ├── analyze-events.js               # Bottleneck-Analyse + Celonis-Export
 ├── simulate-process.js             # Event-Log Simulation (50 Faelle)
@@ -302,16 +321,24 @@ invoicing-system/
 |---|---|
 | `npm run start:servers` | RabbitMQ + gRPC + Payment Worker + Camunda Worker starten |
 | `npm run stop:servers` | Alle Dienste stoppen |
-| `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten |
+| `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten (Standard-Szenario) |
+| `npm run trigger:email:standard` | Standard-Szenario gezielt starten |
+| `npm run trigger:email:compliance` | Compliance-Szenario gezielt starten |
+| `npm run trigger:email:manual` | Manuelle-Korrektur-Szenario gezielt starten |
+| `npm run deploy:bpmn` | BPMN-Prozess + Formulare in Camunda deployen |
 | `npm run rpa:test` | RPA-Bot isoliert testen (headless) |
 | `npm run rpa:demo` | RPA-Bot mit sichtbarem Browser + Video (Praesentation) |
 | `npm run start:camunda-worker` | Nur Camunda Worker starten (ohne andere Dienste) |
 | `npm run start:workflow` | Sprint-3 Workflow Engine starten (Port 3001) |
+| `npm run ai:create-invoice` | Test-Rechnungs-PDF generieren |
+| `npm run ai:test-extract` | KI-Extraktion via Claude API testen |
+| `npm run ai:test-extract-n8n` | KI-Extraktion via n8n + Gemini testen |
 | `npm run simulate:process` | 50 Rechnungsfaelle mit 4 Varianten generieren |
 | `npm run analyze:events` | Logs konsolidieren + Bottlenecks berechnen |
 | `npm run check:grpc` | gRPC Verbindung testen |
 | `npm run check:messaging` | RabbitMQ + Zahlungsfluss testen |
-| `npm run check:integration` | Beide Checks hintereinander |
+| `npm run check:workflow` | Sprint-3 Workflow Engine testen |
+| `npm run check:integration` | gRPC- und Messaging-Check hintereinander |
 | `npm run docker:up` | RabbitMQ Docker-Container starten |
 | `npm run docker:down` | RabbitMQ Docker-Container stoppen |
 
@@ -426,7 +453,7 @@ ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 - Befuellt alle ERP-Felder automatisch (Rechnungsnummer, Datum, Lieferant, Betrag, MwSt.)
 - Laeuft als Unattended Process im Orchestrator (Shared Folder)
 
-**Playwright-Bot** (`sprint5/rpa-erp-bot.js`) — nur fuer isolierte Tests und Demos, laeuft nie automatisch im Camunda-Prozess:
+**Playwright-Bot** (`rpa/rpa-erp-bot.js`) — nur fuer isolierte Tests und Demos, laeuft nie automatisch im Camunda-Prozess:
 
 ```powershell
 npm run rpa:test    # Headless

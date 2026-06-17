@@ -142,7 +142,7 @@ async function fillErpForm({ invoiceId, supplierName, invoiceNumber, amountEuro,
 
 module.exports = { fillErpForm };
 
-// ── Direkter Testlauf: node sprint5/rpa-erp-bot.js ───────────────────────────
+// ── Direkter Testlauf: node rpa/rpa-erp-bot.js ────────────────────────────────
 if (require.main === module) {
   fillErpForm({
     invoiceId:     process.env.INV_ID   || 'INV-TEST-001',

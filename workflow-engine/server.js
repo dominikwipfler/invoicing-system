@@ -2,7 +2,7 @@ const express = require('express');
 const amqp = require('amqplib');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
-const path = require('node:path');
+const path = require('path');
 const { logEvent } = require('./event-logger');
 
 const PROTO_PATH = path.join(__dirname, '../proto/invoice.proto');

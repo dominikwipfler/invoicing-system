@@ -54,8 +54,6 @@ async function startPaymentWorker() {
             const payment = JSON.parse(msg.content.toString());
 
             // Überprüfung auf Duplikat-Zahlung
-            console.log('Set size before check:', paidInvoices.size);
-            console.log('Checking for duplicate:', payment.invoiceId, paidInvoices.has(payment.invoiceId));
             if (paidInvoices.has(payment.invoiceId)) {
               logEvent(payment.invoiceId, 'Duplicate Payment Attempt', 'payment-worker');
               channel.sendToQueue(PAYMENT_STATUS_QUEUE, Buffer.from(JSON.stringify({
@@ -102,7 +100,6 @@ async function startPaymentWorker() {
 
             // Markiere Rechnung als bezahlt
             paidInvoices.add(payment.invoiceId);
-            console.log('Added to paid:', payment.invoiceId, paidInvoices.size);
 
             channel.ack(msg);
           } catch (parseError) {

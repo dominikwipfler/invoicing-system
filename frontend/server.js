@@ -1,5 +1,7 @@
 const express = require('express');
 const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 function runCommand(cmd, opts) {
   return new Promise((resolve, reject) => {
@@ -9,8 +11,6 @@ function runCommand(cmd, opts) {
     });
   });
 }
-const fs = require('fs');
-const path = require('path');
 
 const app = express();
 const config = require('./config.json');
