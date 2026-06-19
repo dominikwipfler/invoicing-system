@@ -64,6 +64,7 @@
         <bpmn:flowNodeRef>Task_Compliance</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>GW_ComplianceDecision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>End_ComplianceFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PaymentEskalation</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Manager" name="Manager">
         <bpmn:flowNodeRef>Task_Approve</bpmn:flowNodeRef>
@@ -349,7 +350,7 @@
     <!-- System: Zahlung via RabbitMQ -->
     <bpmn:serviceTask id="Task_Payment" name="Zahlung an&#10;Zahlungssystem senden">
       <bpmn:extensionElements>
-        <zeebe:taskDefinition type="rabbitmq-payment"/>
+        <zeebe:taskDefinition type="rabbitmq-payment" retries="3"/>
         <zeebe:ioMapping>
           <zeebe:input source="=invoiceId"         target="invoiceId"/>
           <zeebe:input source="=supplierName"      target="supplierName"/>
@@ -362,11 +363,21 @@
       <bpmn:outgoing>Flow_Payment_Archive</bpmn:outgoing>
     </bpmn:serviceTask>
 
-    <!-- Boundary: RabbitMQ Fehler -->
+    <!-- Boundary: RabbitMQ Fehler (nach Ausschöpfen der automatischen Retries) -->
     <bpmn:boundaryEvent id="Boundary_PaymentFehler" attachedToRef="Task_Payment" cancelActivity="true">
-      <bpmn:outgoing>Flow_Payment_Fehler</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Payment_Eskalation</bpmn:outgoing>
       <bpmn:errorEventDefinition errorRef="Error_Payment"/>
     </bpmn:boundaryEvent>
+
+    <!-- Finanzabteilung: Eskalation bei endgültig fehlgeschlagener Zahlung -->
+    <bpmn:userTask id="Task_PaymentEskalation" name="Zahlung&#10;manuell prüfen">
+      <bpmn:extensionElements>
+        <zeebe:userTask/>
+        <zeebe:formDefinition formId="zahlung-eskalation"/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Payment_Eskalation</bpmn:incoming>
+      <bpmn:outgoing>Flow_Eskalation_End</bpmn:outgoing>
+    </bpmn:userTask>
 
     <!-- System: Archivieren -->
     <bpmn:serviceTask id="Task_Archive" name="Rechnung&#10;archivieren">
@@ -383,7 +394,7 @@
     </bpmn:endEvent>
 
     <bpmn:endEvent id="End_Fehler" name="Zahlung&#10;fehlgeschlagen">
-      <bpmn:incoming>Flow_Payment_Fehler</bpmn:incoming>
+      <bpmn:incoming>Flow_Eskalation_End</bpmn:incoming>
     </bpmn:endEvent>
 
     <!-- ── SEQUENCE FLOWS ───────────────────────────────────────────────── -->
@@ -461,7 +472,8 @@
 
     <!-- Zahlung und Archiv -->
     <bpmn:sequenceFlow id="Flow_Payment_Archive"          sourceRef="Task_Payment"            targetRef="Task_Archive"/>
-    <bpmn:sequenceFlow id="Flow_Payment_Fehler"           sourceRef="Boundary_PaymentFehler"  targetRef="End_Fehler"/>
+    <bpmn:sequenceFlow id="Flow_Payment_Eskalation"       sourceRef="Boundary_PaymentFehler"  targetRef="Task_PaymentEskalation"/>
+    <bpmn:sequenceFlow id="Flow_Eskalation_End"           sourceRef="Task_PaymentEskalation"  targetRef="End_Fehler"/>
     <bpmn:sequenceFlow id="Flow_Archive_End"              sourceRef="Task_Archive"            targetRef="End_1"/>
 
   </bpmn:process>
@@ -506,6 +518,7 @@
       <bpmndi:BPMNShape id="s_BgRPC"   bpmnElement="Boundary_gRPCFehler"><dc:Bounds x="1152" y="182" width="36" height="36"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_Payment" bpmnElement="Task_Payment"><dc:Bounds x="2480" y="120" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_BPay"    bpmnElement="Boundary_PaymentFehler"><dc:Bounds x="2532" y="182" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_PayEsk"  bpmnElement="Task_PaymentEskalation"><dc:Bounds x="2480" y="720" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_Archive" bpmnElement="Task_Archive"><dc:Bounds x="2660" y="120" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_End1"    bpmnElement="End_1">
         <dc:Bounds x="2832" y="142" width="36" height="36"/>
@@ -770,9 +783,13 @@
         <di:waypoint x="2600" y="160"/>
         <di:waypoint x="2660" y="160"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e24" bpmnElement="Flow_Payment_Fehler">
+      <bpmndi:BPMNEdge id="e24" bpmnElement="Flow_Payment_Eskalation">
         <di:waypoint x="2550" y="218"/>
-        <di:waypoint x="2560" y="252"/>
+        <di:waypoint x="2550" y="720"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_esk_end" bpmnElement="Flow_Eskalation_End">
+        <di:waypoint x="2540" y="720"/>
+        <di:waypoint x="2560" y="288"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e25" bpmnElement="Flow_Archive_End">
         <di:waypoint x="2780" y="160"/>

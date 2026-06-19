@@ -18,6 +18,8 @@ const PAYMENT_QUEUE = 'payment_requests';
 const ARCHIVE_LOG   = path.join(__dirname, '..', 'event-log.csv');
 const GRPC_CALL_TIMEOUT_MS  = 5000;
 const GRPC_RETRY_BACKOFF_MS = 2000;
+const RABBITMQ_CONNECT_TIMEOUT_MS = 5000;
+const PAYMENT_RETRY_BACKOFF_MS    = 2000;
 
 // ── gRPC-Client ───────────────────────────────────────────────────────────────
 const PROTO_PATH = path.join(__dirname, '..', 'proto', 'invoice.proto');
@@ -35,13 +37,21 @@ let rabbitChannel = null;
 
 async function getRabbitChannel() {
   if (rabbitChannel) return rabbitChannel;
-  const connection = await amqp.connect(RABBITMQ_URL);
+  const connection = await amqp.connect(RABBITMQ_URL, { timeout: RABBITMQ_CONNECT_TIMEOUT_MS });
   const channel    = await connection.createChannel();
   await channel.assertQueue(PAYMENT_QUEUE, { durable: true });
   connection.on('close', () => { rabbitChannel = null; });
   connection.on('error', () => { rabbitChannel = null; });
   rabbitChannel = channel;
   return channel;
+}
+
+// Verbindungsfehler (RabbitMQ nicht erreichbar/Timeout) sind technische Fehler —
+// dafür ist Zeebes eingebauter Job-Retry zuständig, nicht die Finanzabteilung.
+const CONNECTION_ERROR_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EHOSTUNREACH', 'EPIPE']);
+function isConnectionError(err) {
+  if (err.code && CONNECTION_ERROR_CODES.has(err.code)) return true;
+  return /socket closed abruptly|connect ECONNREFUSED|connection.*closed/i.test(err.message || '');
 }
 
 // ── Hilfsfunktionen ───────────────────────────────────────────────────────────
@@ -178,7 +188,33 @@ zbc.createWorker({
     } catch (err) {
       console.error(`[rabbitmq-payment] Fehler: ${err.message}`);
       logEvent(invoiceId, 'Payment Send Failed', 'camunda-worker');
-      return job.error('PAYMENT_ERROR', `RabbitMQ Fehler: ${err.message}`);
+
+      if (isConnectionError(err) && job.retries > 1) {
+        // Technischer Fehler, noch Versuche übrig — automatischer Zeebe-Retry,
+        // analog zum gRPC-Fix (kein Eingriff der Finanzabteilung bei kurzem Aussetzer).
+        const retriesLeft = job.retries - 1;
+        console.warn(`[rabbitmq-payment] RabbitMQ nicht erreichbar — Zeebe-Retry (verbleibend: ${retriesLeft})`);
+        return job.fail({
+          errorMessage: `RabbitMQ nicht erreichbar: ${err.message}`,
+          retries: retriesLeft,
+          retryBackOff: PAYMENT_RETRY_BACKOFF_MS,
+        });
+      }
+
+      // Letzter Versuch ausgeschöpft (oder kein reiner Verbindungsfehler) —
+      // Eskalation an die Finanzabteilung statt stillem Prozessabbruch.
+      console.warn(`[rabbitmq-payment] Keine Versuche mehr übrig — Eskalation an Finanzabteilung (Grund: ${err.message})`);
+      logEvent(invoiceId, 'Payment Escalated to Finance', 'camunda-worker');
+
+      // job.error()'s "variables" landen laut Zeebe-Doku nur im lokalen Scope des
+      // Error-Catch-Boundary-Events und sind im nachfolgenden Formular NICHT sichtbar.
+      // Deshalb die Variable direkt auf der Prozessinstanz setzen (separater API-Call).
+      await zbc.setVariables({
+        elementInstanceKey: job.processInstanceKey,
+        variables: { paymentFailureReason: err.message },
+      });
+
+      return job.error('PAYMENT_ERROR', `Zahlung fehlgeschlagen: ${err.message}`);
     }
   },
 });
