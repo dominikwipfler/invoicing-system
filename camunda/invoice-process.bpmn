@@ -219,9 +219,9 @@
     </bpmn:userTask>
 
     <!-- Gateway: Prüfung bestanden? -->
-    <bpmn:exclusiveGateway id="GW_ValidateDecision" name="Prüfung&#10;bestanden?" default="Flow_ValidateDecision_GW2">
+    <bpmn:exclusiveGateway id="GW_ValidateDecision" name="Prüfung&#10;bestanden?" default="Flow_ValidateDecision_GWInfo">
       <bpmn:incoming>Flow_Validate_GWDecision</bpmn:incoming>
-      <bpmn:outgoing>Flow_ValidateDecision_GW2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ValidateDecision_GWInfo</bpmn:outgoing>
       <bpmn:outgoing>Flow_ValidateDecision_Abgewiesen</bpmn:outgoing>
     </bpmn:exclusiveGateway>
 
@@ -229,45 +229,11 @@
       <bpmn:incoming>Flow_ValidateDecision_Abgewiesen</bpmn:incoming>
     </bpmn:endEvent>
 
-    <!-- Gateway: Compliance Check nötig? -->
-    <bpmn:exclusiveGateway id="GW_ComplianceNeeded" name="Compliance&#10;Check nötig?" default="Flow_GW2_Skip">
-      <bpmn:incoming>Flow_ValidateDecision_GW2</bpmn:incoming>
-      <bpmn:outgoing>Flow_GW2_Check</bpmn:outgoing>
-      <bpmn:outgoing>Flow_GW2_Skip</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <!-- Finanzabteilung: Compliance Check -->
-    <bpmn:userTask id="Task_Compliance" name="Compliance&#10;Check">
-      <bpmn:extensionElements>
-        <zeebe:userTask/>
-        <zeebe:formDefinition formId="compliance-check"/>
-      </bpmn:extensionElements>
-      <bpmn:incoming>Flow_GW2_Check</bpmn:incoming>
-      <bpmn:outgoing>Flow_Compliance_Decision</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <!-- Gateway: Compliance OK? -->
-    <bpmn:exclusiveGateway id="GW_ComplianceDecision" name="Compliance&#10;OK?" default="Flow_ComplianceDecision_Join2">
-      <bpmn:incoming>Flow_Compliance_Decision</bpmn:incoming>
-      <bpmn:outgoing>Flow_ComplianceDecision_Join2</bpmn:outgoing>
-      <bpmn:outgoing>Flow_ComplianceDecision_Fail</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <bpmn:endEvent id="End_ComplianceFail" name="Compliance&#10;fehlgeschlagen">
-      <bpmn:incoming>Flow_ComplianceDecision_Fail</bpmn:incoming>
-    </bpmn:endEvent>
-
-    <bpmn:exclusiveGateway id="GW_Join2">
-      <bpmn:incoming>Flow_GW2_Skip</bpmn:incoming>
-      <bpmn:incoming>Flow_ComplianceDecision_Join2</bpmn:incoming>
-      <bpmn:outgoing>Flow_Join2_GW3</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <!-- Gateway: Info vom Lieferanten nötig? -->
-    <bpmn:exclusiveGateway id="GW_InfoNeeded" name="Info vom&#10;Lieferanten nötig?" default="Flow_GW3_Skip">
-      <bpmn:incoming>Flow_Join2_GW3</bpmn:incoming>
-      <bpmn:outgoing>Flow_GW3_Request</bpmn:outgoing>
-      <bpmn:outgoing>Flow_GW3_Skip</bpmn:outgoing>
+    <!-- Gateway: Info vom Lieferanten nötig? (jetzt VOR dem Compliance Check) -->
+    <bpmn:exclusiveGateway id="GW_InfoNeeded" name="Info vom&#10;Lieferanten nötig?" default="Flow_GWInfo_Skip">
+      <bpmn:incoming>Flow_ValidateDecision_GWInfo</bpmn:incoming>
+      <bpmn:outgoing>Flow_GWInfo_Request</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GWInfo_Skip</bpmn:outgoing>
     </bpmn:exclusiveGateway>
 
     <bpmn:userTask id="Task_RequestInfo" name="Info beim&#10;Lieferanten anfragen">
@@ -275,7 +241,7 @@
         <zeebe:userTask/>
         <zeebe:formDefinition formId="info-lieferant"/>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_GW3_Request</bpmn:incoming>
+      <bpmn:incoming>Flow_GWInfo_Request</bpmn:incoming>
       <bpmn:outgoing>Flow_Request_Receive</bpmn:outgoing>
     </bpmn:userTask>
 
@@ -291,13 +257,47 @@
       <bpmn:outgoing>Flow_ReceiveInfo_ValidateJoin</bpmn:outgoing>
     </bpmn:userTask>
 
+    <!-- Gateway: Compliance Check nötig? (jetzt NACH Request/Receive Information) -->
+    <bpmn:exclusiveGateway id="GW_ComplianceNeeded" name="Compliance&#10;Check nötig?" default="Flow_GWCompliance_Skip">
+      <bpmn:incoming>Flow_GWInfo_Skip</bpmn:incoming>
+      <bpmn:outgoing>Flow_GWCompliance_Check</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GWCompliance_Skip</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Finanzabteilung: Compliance Check -->
+    <bpmn:userTask id="Task_Compliance" name="Compliance&#10;Check">
+      <bpmn:extensionElements>
+        <zeebe:userTask/>
+        <zeebe:formDefinition formId="compliance-check"/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_GWCompliance_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Compliance_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Gateway: Compliance OK? -->
+    <bpmn:exclusiveGateway id="GW_ComplianceDecision" name="Compliance&#10;OK?" default="Flow_ComplianceDecision_Join2">
+      <bpmn:incoming>Flow_Compliance_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_ComplianceDecision_Join2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ComplianceDecision_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="End_ComplianceFail" name="Compliance&#10;fehlgeschlagen">
+      <bpmn:incoming>Flow_ComplianceDecision_Fail</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:exclusiveGateway id="GW_Join2">
+      <bpmn:incoming>Flow_GWCompliance_Skip</bpmn:incoming>
+      <bpmn:incoming>Flow_ComplianceDecision_Join2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Join2_Approve</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
     <!-- Manager: Rechnung freigeben -->
     <bpmn:userTask id="Task_Approve" name="Rechnung&#10;freigeben">
       <bpmn:extensionElements>
         <zeebe:userTask/>
         <zeebe:formDefinition formId="freigabe"/>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_GW3_Skip</bpmn:incoming>
+      <bpmn:incoming>Flow_Join2_Approve</bpmn:incoming>
       <bpmn:outgoing>Flow_Approve_GWDecision</bpmn:outgoing>
     </bpmn:userTask>
 
@@ -418,18 +418,26 @@
 
     <!-- Validierung -->
     <bpmn:sequenceFlow id="Flow_Validate_GWDecision"      sourceRef="Task_Validate"         targetRef="GW_ValidateDecision"/>
-    <bpmn:sequenceFlow id="Flow_ValidateDecision_GW2" name="ja" sourceRef="GW_ValidateDecision" targetRef="GW_ComplianceNeeded">
+    <bpmn:sequenceFlow id="Flow_ValidateDecision_GWInfo" name="ja" sourceRef="GW_ValidateDecision" targetRef="GW_InfoNeeded">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_ValidateDecision_Abgewiesen" name="nein" sourceRef="GW_ValidateDecision" targetRef="End_Abgewiesen">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
 
-    <!-- Compliance -->
-    <bpmn:sequenceFlow id="Flow_GW2_Check" name="ja"      sourceRef="GW_ComplianceNeeded"   targetRef="Task_Compliance">
+    <!-- Info-Anfrage (jetzt VOR dem Compliance Check) -->
+    <bpmn:sequenceFlow id="Flow_GWInfo_Request" name="ja" sourceRef="GW_InfoNeeded"          targetRef="Task_RequestInfo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=infoNeeded = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_GWInfo_Skip" name="nein"  sourceRef="GW_InfoNeeded"          targetRef="GW_ComplianceNeeded"/>
+    <bpmn:sequenceFlow id="Flow_Request_Receive"          sourceRef="Task_RequestInfo"        targetRef="Task_ReceiveInfo"/>
+    <bpmn:sequenceFlow id="Flow_ReceiveInfo_ValidateJoin" sourceRef="Task_ReceiveInfo"        targetRef="GW_ValidateJoin"/>
+
+    <!-- Compliance (jetzt NACH Request/Receive Information) -->
+    <bpmn:sequenceFlow id="Flow_GWCompliance_Check" name="ja" sourceRef="GW_ComplianceNeeded" targetRef="Task_Compliance">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=complianceNeeded = true</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_GW2_Skip" name="nein"     sourceRef="GW_ComplianceNeeded"   targetRef="GW_Join2"/>
+    <bpmn:sequenceFlow id="Flow_GWCompliance_Skip" name="nein" sourceRef="GW_ComplianceNeeded" targetRef="GW_Join2"/>
     <bpmn:sequenceFlow id="Flow_Compliance_Decision"      sourceRef="Task_Compliance"        targetRef="GW_ComplianceDecision"/>
     <bpmn:sequenceFlow id="Flow_ComplianceDecision_Join2" name="OK" sourceRef="GW_ComplianceDecision" targetRef="GW_Join2">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
@@ -437,15 +445,7 @@
     <bpmn:sequenceFlow id="Flow_ComplianceDecision_Fail" name="nicht OK" sourceRef="GW_ComplianceDecision" targetRef="End_ComplianceFail">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-
-    <!-- Info-Anfrage -->
-    <bpmn:sequenceFlow id="Flow_Join2_GW3"                sourceRef="GW_Join2"               targetRef="GW_InfoNeeded"/>
-    <bpmn:sequenceFlow id="Flow_GW3_Request" name="ja"    sourceRef="GW_InfoNeeded"          targetRef="Task_RequestInfo">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=infoNeeded = true</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_GW3_Skip" name="nein"     sourceRef="GW_InfoNeeded"          targetRef="Task_Approve"/>
-    <bpmn:sequenceFlow id="Flow_Request_Receive"          sourceRef="Task_RequestInfo"        targetRef="Task_ReceiveInfo"/>
-    <bpmn:sequenceFlow id="Flow_ReceiveInfo_ValidateJoin" sourceRef="Task_ReceiveInfo"        targetRef="GW_ValidateJoin"/>
+    <bpmn:sequenceFlow id="Flow_Join2_Approve"            sourceRef="GW_Join2"               targetRef="Task_Approve"/>
 
     <!-- Freigabe und ERP -->
     <bpmn:sequenceFlow id="Flow_Approve_GWDecision"       sourceRef="Task_Approve"            targetRef="GW_ApproveDecision"/>
@@ -540,17 +540,18 @@
         <dc:Bounds x="1862" y="432" width="36" height="36"/>
         <bpmndi:BPMNLabel><dc:Bounds x="1844" y="476" width="72" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="s_GWComp"        bpmnElement="GW_ComplianceNeeded" isMarkerVisible="true">
-        <dc:Bounds x="1975" y="315" width="50" height="50"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="1962" y="373" width="76" height="40"/></bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="s_GWJ2"          bpmnElement="GW_Join2" isMarkerVisible="true"><dc:Bounds x="2135" y="315" width="50" height="50"/></bpmndi:BPMNShape>
+      <!-- Info-Anfrage jetzt zuerst, Compliance Check danach (Reihenfolge-Fix) -->
       <bpmndi:BPMNShape id="s_GWInfo"        bpmnElement="GW_InfoNeeded" isMarkerVisible="true">
-        <dc:Bounds x="2255" y="315" width="50" height="50"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2244" y="263" width="72" height="40"/></bpmndi:BPMNLabel>
+        <dc:Bounds x="1965" y="315" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1954" y="263" width="72" height="40"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="s_ReqInfo"       bpmnElement="Task_RequestInfo"><dc:Bounds x="2100" y="400" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="s_RecvInfo"      bpmnElement="Task_ReceiveInfo"><dc:Bounds x="1900" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_ReqInfo"       bpmnElement="Task_RequestInfo"><dc:Bounds x="1930" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_RecvInfo"      bpmnElement="Task_ReceiveInfo"><dc:Bounds x="1750" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_GWComp"        bpmnElement="GW_ComplianceNeeded" isMarkerVisible="true">
+        <dc:Bounds x="2135" y="315" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2122" y="373" width="76" height="40"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_GWJ2"          bpmnElement="GW_Join2" isMarkerVisible="true"><dc:Bounds x="2280" y="315" width="50" height="50"/></bpmndi:BPMNShape>
 
       <!-- ── DataEntry Lane (um +400 verschoben) ── -->
       <bpmndi:BPMNShape id="s_Enter"     bpmnElement="Task_EnterData"><dc:Bounds x="1270" y="560" width="120" height="80"/></bpmndi:BPMNShape>
@@ -559,14 +560,14 @@
       <bpmndi:BPMNShape id="s_ManualERP" bpmnElement="Task_ManualERP"><dc:Bounds x="2580" y="560" width="120" height="80"/></bpmndi:BPMNShape>
 
       <!-- ── Finance Lane (um +400 verschoben) ── -->
-      <bpmndi:BPMNShape id="s_Comply"      bpmnElement="Task_Compliance"><dc:Bounds x="1950" y="720" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_Comply"      bpmnElement="Task_Compliance"><dc:Bounds x="2100" y="720" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_GWCompDec"   bpmnElement="GW_ComplianceDecision" isMarkerVisible="true">
-        <dc:Bounds x="2130" y="735" width="50" height="50"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2117" y="793" width="76" height="27"/></bpmndi:BPMNLabel>
+        <dc:Bounds x="2280" y="735" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2267" y="793" width="76" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_EndCompFail" bpmnElement="End_ComplianceFail">
-        <dc:Bounds x="2262" y="742" width="36" height="36"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2240" y="786" width="80" height="27"/></bpmndi:BPMNLabel>
+        <dc:Bounds x="2410" y="742" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2388" y="786" width="80" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- ── Manager Lane (um +400 verschoben) ── -->
@@ -668,10 +669,10 @@
         <di:waypoint x="1800" y="340"/>
         <di:waypoint x="1860" y="340"/>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e_vd_gw2" bpmnElement="Flow_ValidateDecision_GW2">
+      <bpmndi:BPMNEdge id="e_vd_gwinfo" bpmnElement="Flow_ValidateDecision_GWInfo">
         <di:waypoint x="1910" y="340"/>
-        <di:waypoint x="1975" y="340"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="1934" y="322" width="9" height="14"/></bpmndi:BPMNLabel>
+        <di:waypoint x="1965" y="340"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1924" y="322" width="9" height="14"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e_vd_ab" bpmnElement="Flow_ValidateDecision_Abgewiesen">
         <di:waypoint x="1885" y="365"/>
@@ -679,56 +680,56 @@
         <bpmndi:BPMNLabel><dc:Bounds x="1891" y="395" width="23" height="14"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
-      <!-- Compliance -->
-      <bpmndi:BPMNEdge id="e13" bpmnElement="Flow_GW2_Check">
-        <di:waypoint x="2000" y="365"/>
-        <di:waypoint x="2000" y="720"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2006" y="540" width="9" height="14"/></bpmndi:BPMNLabel>
+      <!-- Info-Anfrage (jetzt zuerst) -->
+      <bpmndi:BPMNEdge id="e17" bpmnElement="Flow_GWInfo_Request">
+        <di:waypoint x="1990" y="365"/>
+        <di:waypoint x="1990" y="400"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1996" y="375" width="9" height="14"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e14" bpmnElement="Flow_GW2_Skip">
-        <di:waypoint x="2025" y="340"/>
+      <bpmndi:BPMNEdge id="e18" bpmnElement="Flow_GWInfo_Skip">
+        <di:waypoint x="2015" y="340"/>
         <di:waypoint x="2135" y="340"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2072" y="322" width="23" height="14"/></bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e15" bpmnElement="Flow_Compliance_Decision">
-        <di:waypoint x="2070" y="760"/>
-        <di:waypoint x="2130" y="760"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e_cd_join" bpmnElement="Flow_ComplianceDecision_Join2">
-        <di:waypoint x="2155" y="735"/>
-        <di:waypoint x="2160" y="365"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2166" y="540" width="15" height="14"/></bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e_cd_fail" bpmnElement="Flow_ComplianceDecision_Fail">
-        <di:waypoint x="2180" y="760"/>
-        <di:waypoint x="2262" y="760"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2195" y="742" width="45" height="14"/></bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-
-      <!-- Info-Anfrage -->
-      <bpmndi:BPMNEdge id="e16" bpmnElement="Flow_Join2_GW3">
-        <di:waypoint x="2185" y="340"/>
-        <di:waypoint x="2255" y="340"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e17" bpmnElement="Flow_GW3_Request">
-        <di:waypoint x="2280" y="365"/>
-        <di:waypoint x="2280" y="440"/>
-        <di:waypoint x="2220" y="440"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2283" y="400" width="9" height="14"/></bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="e18" bpmnElement="Flow_GW3_Skip">
-        <di:waypoint x="2280" y="365"/>
-        <di:waypoint x="2280" y="920"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2286" y="640" width="23" height="14"/></bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel><dc:Bounds x="2065" y="322" width="23" height="14"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e19" bpmnElement="Flow_Request_Receive">
-        <di:waypoint x="2100" y="440"/>
-        <di:waypoint x="2020" y="440"/>
+        <di:waypoint x="1930" y="440"/>
+        <di:waypoint x="1870" y="440"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e20" bpmnElement="Flow_ReceiveInfo_ValidateJoin">
-        <di:waypoint x="1900" y="440"/>
+        <di:waypoint x="1810" y="440"/>
         <di:waypoint x="1600" y="440"/>
         <di:waypoint x="1600" y="185"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Compliance (jetzt danach) -->
+      <bpmndi:BPMNEdge id="e13" bpmnElement="Flow_GWCompliance_Check">
+        <di:waypoint x="2160" y="365"/>
+        <di:waypoint x="2160" y="720"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2166" y="540" width="9" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e14" bpmnElement="Flow_GWCompliance_Skip">
+        <di:waypoint x="2185" y="340"/>
+        <di:waypoint x="2280" y="340"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2222" y="322" width="23" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e15" bpmnElement="Flow_Compliance_Decision">
+        <di:waypoint x="2220" y="760"/>
+        <di:waypoint x="2280" y="760"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_cd_join" bpmnElement="Flow_ComplianceDecision_Join2">
+        <di:waypoint x="2305" y="735"/>
+        <di:waypoint x="2305" y="365"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2311" y="540" width="15" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_cd_fail" bpmnElement="Flow_ComplianceDecision_Fail">
+        <di:waypoint x="2330" y="760"/>
+        <di:waypoint x="2410" y="760"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2345" y="742" width="45" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e16" bpmnElement="Flow_Join2_Approve">
+        <di:waypoint x="2305" y="365"/>
+        <di:waypoint x="2305" y="920"/>
+        <di:waypoint x="2300" y="920"/>
       </bpmndi:BPMNEdge>
 
       <!-- Freigabe und ERP -->
