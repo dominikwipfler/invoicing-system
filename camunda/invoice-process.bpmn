@@ -134,7 +134,7 @@
     <!-- System: Metadaten per gRPC speichern -->
     <bpmn:serviceTask id="Task_gRPC" name="Metadaten per&#10;gRPC speichern">
       <bpmn:extensionElements>
-        <zeebe:taskDefinition type="grpc-save-invoice"/>
+        <zeebe:taskDefinition type="grpc-save-invoice" retries="3"/>
         <zeebe:ioMapping>
           <zeebe:input source="=invoiceId"     target="invoiceId"/>
           <zeebe:input source="=supplierName"  target="supplierName"/>
