@@ -1,9 +1,13 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const fs = require('fs/promises');
 const amqp = require('amqplib');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
+const { RABBITMQ_URL } = require('../shared/rabbitmq');
 
+const GRPC_ADDRESS = process.env.GRPC_ADDRESS || '127.0.0.1:50051';
+const PAYMENT_QUEUE = 'payment_requests';
 const PROTO_PATH = path.join(__dirname, '../proto/invoice.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
@@ -15,7 +19,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const invoiceProto = grpc.loadPackageDefinition(packageDefinition).invoice;
 const grpcClient = new invoiceProto.InvoiceService(
-  'localhost:50051',
+  GRPC_ADDRESS,
   grpc.credentials.createInsecure()
 );
 
@@ -68,10 +72,10 @@ async function sendPayment() {
   try {
     const invoice = await verifyInvoice(invoiceId);
 
-    const connection = await amqp.connect('amqp://guest:guest@localhost:5672');
+    const connection = await amqp.connect(RABBITMQ_URL);
     const channel = await connection.createChannel();
 
-    const queue = 'payment_requests';
+    const queue = PAYMENT_QUEUE;
     await channel.assertQueue(queue, { durable: true });
 
     const paymentOrder = {

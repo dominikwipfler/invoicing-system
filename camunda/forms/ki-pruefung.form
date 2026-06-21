@@ -10,70 +10,38 @@
     {
       "type": "text",
       "id": "Text_Header",
-      "text": "### KI-Extraktion prüfen und korrigieren\nDie KI hat die folgenden Rechnungsdaten aus dem PDF extrahiert. Bitte prüfen Sie die Werte und korrigieren Sie sie bei Bedarf. Die KI-Konfidenz war unter dem Schwellenwert von 80%.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
+      "text": "### KI-Extraktion prüfen und korrigieren\nDie KI hat die folgenden Rechnungsdaten aus dem PDF extrahiert. Bitte vergleichen Sie die Werte links mit dem Originaldokument rechts und korrigieren Sie sie bei Bedarf. Die KI-Konfidenz war unter dem Schwellenwert von 80%."
     },
     {
       "type": "group",
-      "id": "MainLayout",
-      "label": "",
-      "columns": 2,
+      "id": "Group_Fields",
+      "label": "Rechnungsdaten (bearbeitbar)",
+      "showOutline": true,
+      "layout": { "row": "Row_MainSplit", "columns": 8 },
       "components": [
-        {
-          "type": "text",
-          "id": "Text_LeftHeader",
-          "text": "#### Rechnungsdaten (bearbeitbar)"
-        },
-        {
-          "type": "text",
-          "id": "Text_RightHeader",
-          "text": "#### Originaldokument"
-        },
         {
           "type": "textfield",
           "id": "Field_supplierName",
           "key": "supplierName",
           "label": "Lieferant *",
-          "validate": {
-            "required": true,
-            "minLength": 2
-          }
-        },
-        {
-          "type": "html",
-          "id": "PDFPreview_Spacer1",
-          "text": ""
+          "validate": { "required": true, "minLength": 2 }
         },
         {
           "type": "textfield",
           "id": "Field_invoiceNumber",
           "key": "invoiceNumber",
           "label": "Rechnungsnummer *",
-          "validate": {
-            "required": true
-          }
-        },
-        {
-          "type": "html",
-          "id": "PDFPreview_Spacer2",
-          "text": ""
+          "validate": { "required": true }
         },
         {
           "type": "number",
           "id": "Field_amountEuro",
           "key": "amountEuro",
           "label": "Betrag (€) *",
-          "validate": {
-            "required": true,
-            "min": 0.01
-          },
+          "validate": { "required": true, "min": 0.01 },
           "decimalDigits": 2,
           "increment": "0.01",
           "serializeToString": false
-        },
-        {
-          "type": "html",
-          "id": "PDFPreview_Spacer3",
-          "text": ""
         },
         {
           "type": "datetime",
@@ -82,14 +50,7 @@
           "label": "Rechnungsdatum *",
           "subtype": "date",
           "dateLabel": "Datum wählen",
-          "validate": {
-            "required": true
-          }
-        },
-        {
-          "type": "html",
-          "id": "PDFPreview_Spacer4",
-          "text": ""
+          "validate": { "required": true }
         },
         {
           "type": "number",
@@ -101,18 +62,11 @@
           "serializeToString": false
         },
         {
-          "type": "html",
-          "id": "PDFPreview_Info",
-          "text": "<div style='border: 1px solid #ddd; padding: 12px; border-radius: 4px; background: #f9f9f9; font-size: 13px; line-height: 1.4;'><strong>📄 Originaldokument</strong><br/><br/><div id='pdfPathDisplay' style='word-break: break-all; font-family: monospace; color: #666; font-size: 12px;'></div></div>"
-        },
-        {
           "type": "select",
           "id": "Field_eingangskanal",
           "key": "eingangskanal",
           "label": "Eingangskanal",
-          "validate": {
-            "required": true
-          },
+          "validate": { "required": true },
           "values": [
             { "label": "E-Mail", "value": "email" },
             { "label": "Post / Brief", "value": "post" },
@@ -121,20 +75,25 @@
           ]
         },
         {
-          "type": "html",
-          "id": "PDFPreview_Spacer5",
-          "text": ""
-        },
-        {
           "type": "textarea",
           "id": "Field_notizen",
           "key": "notizen",
           "label": "Bemerkungen (optional)"
-        },
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "Group_Preview",
+      "label": "Originaldokument",
+      "showOutline": true,
+      "layout": { "row": "Row_MainSplit", "columns": 8 },
+      "components": [
         {
-          "type": "html",
-          "id": "PDFPreview_Script",
-          "text": "<script>\ndocument.addEventListener('DOMContentLoaded', function() {\n  const taskData = window.__camunda_task_data || {};\n  const variables = taskData.variables || {};\n  const pdfPath = variables.pdfPath || '(Keine PDF-Datei angegeben)';\n  const displayEl = document.getElementById('pdfPathDisplay');\n  if (displayEl) {\n    displayEl.textContent = 'Pfad: ' + pdfPath;\n  }\n});\n</script>"
+          "type": "image",
+          "id": "Image_PDFPreview",
+          "source": "=pdfImageDataUri",
+          "alt": "Originaldokument"
         }
       ]
     }

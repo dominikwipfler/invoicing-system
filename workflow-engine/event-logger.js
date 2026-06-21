@@ -1,5 +1,5 @@
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require('fs');
+const path = require('path');
 
 const LOG_FILE = path.join(__dirname, 'event-log.csv');
 

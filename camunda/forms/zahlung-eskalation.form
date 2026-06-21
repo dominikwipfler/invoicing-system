@@ -1,0 +1,39 @@
+{
+  "id": "zahlung-eskalation",
+  "schemaVersion": 12,
+  "exporter": {
+    "name": "Camunda Forms",
+    "version": "0.12.0"
+  },
+  "type": "default",
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_Header",
+      "text": "### Zahlung fehlgeschlagen — Eskalation\nDie automatische Zahlung konnte auch nach mehreren Versuchen nicht ausgelöst werden. Bitte prüfen und manuell veranlassen."
+    },
+    {
+      "type": "text",
+      "id": "Text_Zusammenfassung",
+      "text": "**Rechnungsübersicht**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Betrag: `{{amountEuro}} €`\n- Fehlermeldung: `{{paymentFailureReason}}`"
+    },
+    {
+      "type": "textarea",
+      "id": "Field_eskalationKommentar",
+      "key": "eskalationKommentar",
+      "label": "Maßnahme / Kommentar",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_bearbeiterName",
+      "key": "bearbeiterName",
+      "label": "Ihr Name (Finanzabteilung)",
+      "validate": {
+        "required": true
+      }
+    }
+  ]
+}

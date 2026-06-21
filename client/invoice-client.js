@@ -1,7 +1,9 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 
+const GRPC_ADDRESS = process.env.GRPC_ADDRESS || '127.0.0.1:50051';
 const PROTO_PATH = path.join(__dirname, '../proto/invoice.proto');
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -15,7 +17,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 const invoiceProto = grpc.loadPackageDefinition(packageDefinition).invoice;
 
 const client = new invoiceProto.InvoiceService(
-  'localhost:50051',
+  GRPC_ADDRESS,
   grpc.credentials.createInsecure()
 );
 

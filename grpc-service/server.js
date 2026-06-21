@@ -1,8 +1,10 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const { logEvent } = require('./event-logger');
 
+const GRPC_ADDRESS = process.env.GRPC_ADDRESS || '127.0.0.1:50051';
 const PROTO_PATH = path.join(__dirname, '../proto/invoice.proto');
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -79,7 +81,7 @@ const invoiceServiceImplementation = {
 const server = new grpc.Server();
 server.addService(invoiceProto.InvoiceService.service, invoiceServiceImplementation);
 
-server.bindAsync('127.0.0.1:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+server.bindAsync(GRPC_ADDRESS, grpc.ServerCredentials.createInsecure(), (err, port) => {
   if (err) {
     console.error('gRPC Bind-Fehler:', err.message);
     process.exit(1);

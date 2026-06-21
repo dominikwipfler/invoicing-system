@@ -21,6 +21,7 @@ async function deploy() {
     { name: 'compliance-check.form',    form: fs.readFileSync(path.join(formsDir, 'compliance-check.form')) },
     { name: 'erp-bestaetigung.form',    form: fs.readFileSync(path.join(formsDir, 'erp-bestaetigung.form')) },
     { name: 'ki-pruefung.form',         form: fs.readFileSync(path.join(formsDir, 'ki-pruefung.form')) },
+    { name: 'zahlung-eskalation.form',  form: fs.readFileSync(path.join(formsDir, 'zahlung-eskalation.form')) },
   ]);
 
   console.log('\nDeployment erfolgreich:');

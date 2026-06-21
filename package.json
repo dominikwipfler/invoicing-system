@@ -1,8 +1,7 @@
 {
   "name": "invoicing-system",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Digitalisierung eines Eingangsrechnungsprozesses mit gRPC, RabbitMQ, Camunda 8 BPM, RPA und KI-Extraktion (HKA Projekt Digitalisierung von Geschaeftsprozessen).",
   "directories": {
     "doc": "docs"
   },
@@ -40,9 +39,11 @@
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
     "amqplib": "^1.0.2",
+    "canvas": "^3.2.3",
     "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "pdfjs-dist": "^4.8.69",
     "playwright": "^1.60.0"
   }
 }
