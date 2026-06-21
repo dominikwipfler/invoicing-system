@@ -383,7 +383,7 @@ if ($existingCamunda) {
 
 Write-Step '5/5' 'Frontend-Cockpit starten'
 $frontendDir = Join-Path $scriptRoot 'frontend'
-$pidFilePath = Join-Path $scriptRoot '.runtime' 'frontend-browser.pid'
+$pidFilePath = Join-Path $runtimeDir 'frontend-browser.pid'
 
 # Prüfe Node-Modul und installiere bei Bedarf
 $nodeModulesPath = Join-Path $frontendDir 'node_modules'

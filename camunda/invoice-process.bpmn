@@ -53,6 +53,7 @@
         <bpmn:flowNodeRef>GW_InfoNeeded</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_RequestInfo</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_ReceiveInfo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyAbgewiesen</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>End_Abgewiesen</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_DataEntry" name="Datenerfassung">
@@ -63,12 +64,14 @@
       <bpmn:lane id="Lane_Finance" name="Finanzabteilung">
         <bpmn:flowNodeRef>Task_Compliance</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>GW_ComplianceDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyComplianceFail</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>End_ComplianceFail</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_PaymentEskalation</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Manager" name="Manager">
         <bpmn:flowNodeRef>Task_Approve</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>GW_ApproveDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_NotifyAbgelehnt</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>End_Abgelehnt</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
@@ -232,8 +235,23 @@
       <bpmn:outgoing>Flow_ValidateDecision_Abgewiesen</bpmn:outgoing>
     </bpmn:exclusiveGateway>
 
-    <bpmn:endEvent id="End_Abgewiesen" name="Rechnung&#10;abgewiesen">
+    <!-- Lieferant über Ablehnung informieren — Prozess endet nicht kommentarlos,
+         im realen Geschäftsprozess wird der Lieferant über den Ablehnungsgrund informiert. -->
+    <bpmn:serviceTask id="Task_NotifyAbgewiesen" name="Lieferant&#10;informieren">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-supplier-rejection"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="=invoiceId"     target="invoiceId"/>
+          <zeebe:input source="=supplierName"  target="supplierName"/>
+          <zeebe:input source="=&#34;Die Rechnungsprüfung wurde nicht bestanden.&#34;" target="rejectionReason"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ValidateDecision_Abgewiesen</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyAbgewiesen_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Abgewiesen" name="Rechnung&#10;abgewiesen">
+      <bpmn:incoming>Flow_NotifyAbgewiesen_End</bpmn:incoming>
     </bpmn:endEvent>
 
     <!-- Gateway: Info vom Lieferanten nötig? (jetzt VOR dem Compliance Check) -->
@@ -291,8 +309,22 @@
       <bpmn:outgoing>Flow_ComplianceDecision_Fail</bpmn:outgoing>
     </bpmn:exclusiveGateway>
 
-    <bpmn:endEvent id="End_ComplianceFail" name="Compliance&#10;fehlgeschlagen">
+    <!-- Lieferant über Ablehnung informieren (Compliance-Verstoß) -->
+    <bpmn:serviceTask id="Task_NotifyComplianceFail" name="Lieferant&#10;informieren">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-supplier-rejection"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="=invoiceId"     target="invoiceId"/>
+          <zeebe:input source="=supplierName"  target="supplierName"/>
+          <zeebe:input source="=&#34;Die Rechnung hat den Compliance Check nicht bestanden.&#34;" target="rejectionReason"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ComplianceDecision_Fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyComplianceFail_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_ComplianceFail" name="Compliance&#10;fehlgeschlagen">
+      <bpmn:incoming>Flow_NotifyComplianceFail_End</bpmn:incoming>
     </bpmn:endEvent>
 
     <bpmn:exclusiveGateway id="GW_Join2">
@@ -319,8 +351,22 @@
       <bpmn:outgoing>Flow_ApproveDecision_Reject</bpmn:outgoing>
     </bpmn:exclusiveGateway>
 
-    <bpmn:endEvent id="End_Abgelehnt" name="Rechnung&#10;abgelehnt">
+    <!-- Lieferant über Ablehnung informieren (Manager-Entscheidung) -->
+    <bpmn:serviceTask id="Task_NotifyAbgelehnt" name="Lieferant&#10;informieren">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-supplier-rejection"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="=invoiceId"     target="invoiceId"/>
+          <zeebe:input source="=supplierName"  target="supplierName"/>
+          <zeebe:input source="=&#34;Die Rechnung wurde durch den Manager abgelehnt.&#34;" target="rejectionReason"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ApproveDecision_Reject</bpmn:incoming>
+      <bpmn:outgoing>Flow_NotifyAbgelehnt_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Abgelehnt" name="Rechnung&#10;abgelehnt">
+      <bpmn:incoming>Flow_NotifyAbgelehnt_End</bpmn:incoming>
     </bpmn:endEvent>
 
     <!-- Datenerfassung: ERP-Erfassung per Playwright RPA -->
@@ -443,9 +489,10 @@
     <bpmn:sequenceFlow id="Flow_ValidateDecision_GWInfo" name="ja" sourceRef="GW_ValidateDecision" targetRef="GW_InfoNeeded">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ValidateDecision_Abgewiesen" name="nein" sourceRef="GW_ValidateDecision" targetRef="End_Abgewiesen">
+    <bpmn:sequenceFlow id="Flow_ValidateDecision_Abgewiesen" name="nein" sourceRef="GW_ValidateDecision" targetRef="Task_NotifyAbgewiesen">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotifyAbgewiesen_End" sourceRef="Task_NotifyAbgewiesen" targetRef="End_Abgewiesen"/>
 
     <!-- Info-Anfrage (jetzt VOR dem Compliance Check) -->
     <bpmn:sequenceFlow id="Flow_GWInfo_Request" name="ja" sourceRef="GW_InfoNeeded"          targetRef="Task_RequestInfo">
@@ -464,9 +511,10 @@
     <bpmn:sequenceFlow id="Flow_ComplianceDecision_Join2" name="OK" sourceRef="GW_ComplianceDecision" targetRef="GW_Join2">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ComplianceDecision_Fail" name="nicht OK" sourceRef="GW_ComplianceDecision" targetRef="End_ComplianceFail">
+    <bpmn:sequenceFlow id="Flow_ComplianceDecision_Fail" name="nicht OK" sourceRef="GW_ComplianceDecision" targetRef="Task_NotifyComplianceFail">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotifyComplianceFail_End" sourceRef="Task_NotifyComplianceFail" targetRef="End_ComplianceFail"/>
     <bpmn:sequenceFlow id="Flow_Join2_Approve"            sourceRef="GW_Join2"               targetRef="Task_Approve"/>
 
     <!-- Freigabe und ERP -->
@@ -474,9 +522,10 @@
     <bpmn:sequenceFlow id="Flow_ApproveDecision_ERP" name="ja" sourceRef="GW_ApproveDecision" targetRef="Task_EnterERP">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ApproveDecision_Reject" name="nein" sourceRef="GW_ApproveDecision" targetRef="End_Abgelehnt">
+    <bpmn:sequenceFlow id="Flow_ApproveDecision_Reject" name="nein" sourceRef="GW_ApproveDecision" targetRef="Task_NotifyAbgelehnt">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotifyAbgelehnt_End"      sourceRef="Task_NotifyAbgelehnt"   targetRef="End_Abgelehnt"/>
     <bpmn:sequenceFlow id="Flow_ERPFehler_Manual"         sourceRef="Boundary_ERPFehler"     targetRef="Task_ManualERP"/>
     <bpmn:sequenceFlow id="Flow_ERP_Payment"              sourceRef="Task_EnterERP"           targetRef="Task_Payment"/>
     <bpmn:sequenceFlow id="Flow_ManualERP_Payment"        sourceRef="Task_ManualERP"          targetRef="Task_Payment"/>
@@ -529,7 +578,7 @@
       <bpmndi:BPMNShape id="s_BgRPC"   bpmnElement="Boundary_gRPCFehler"><dc:Bounds x="1152" y="182" width="36" height="36"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_Payment" bpmnElement="Task_Payment"><dc:Bounds x="2480" y="120" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_BPay"    bpmnElement="Boundary_PaymentFehler"><dc:Bounds x="2532" y="182" width="36" height="36"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="s_PayEsk"  bpmnElement="Task_PaymentEskalation"><dc:Bounds x="2480" y="720" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_PayEsk"  bpmnElement="Task_PaymentEskalation"><dc:Bounds x="2650" y="720" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_Archive" bpmnElement="Task_Archive"><dc:Bounds x="2660" y="120" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_End1"    bpmnElement="End_1">
         <dc:Bounds x="2832" y="142" width="36" height="36"/>
@@ -560,9 +609,10 @@
         <dc:Bounds x="1860" y="315" width="50" height="50"/>
         <bpmndi:BPMNLabel><dc:Bounds x="1847" y="373" width="76" height="40"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_NotifyAbgewiesen" bpmnElement="Task_NotifyAbgewiesen"><dc:Bounds x="1825" y="487" width="120" height="48"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_EndAbgewiesen" bpmnElement="End_Abgewiesen">
-        <dc:Bounds x="1862" y="432" width="36" height="36"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="1844" y="476" width="72" height="27"/></bpmndi:BPMNLabel>
+        <dc:Bounds x="1990" y="493" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1972" y="537" width="72" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <!-- Info-Anfrage jetzt zuerst, Compliance Check danach (Reihenfolge-Fix) -->
       <bpmndi:BPMNShape id="s_GWInfo"        bpmnElement="GW_InfoNeeded" isMarkerVisible="true">
@@ -589,9 +639,10 @@
         <dc:Bounds x="2280" y="735" width="50" height="50"/>
         <bpmndi:BPMNLabel><dc:Bounds x="2267" y="793" width="76" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_NotifyComplianceFail" bpmnElement="Task_NotifyComplianceFail"><dc:Bounds x="2360" y="720" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_EndCompFail" bpmnElement="End_ComplianceFail">
-        <dc:Bounds x="2410" y="742" width="36" height="36"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2388" y="786" width="80" height="27"/></bpmndi:BPMNLabel>
+        <dc:Bounds x="2510" y="742" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2488" y="786" width="80" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- ── Manager Lane (um +400 verschoben) ── -->
@@ -600,9 +651,10 @@
         <dc:Bounds x="2425" y="935" width="50" height="50"/>
         <bpmndi:BPMNLabel><dc:Bounds x="2412" y="993" width="76" height="40"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_NotifyAbgelehnt" bpmnElement="Task_NotifyAbgelehnt"><dc:Bounds x="2560" y="920" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_EndAbgelehnt" bpmnElement="End_Abgelehnt">
-        <dc:Bounds x="2562" y="942" width="36" height="36"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2544" y="986" width="72" height="27"/></bpmndi:BPMNLabel>
+        <dc:Bounds x="2740" y="942" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2722" y="986" width="72" height="27"/></bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- ── Edges ── -->
@@ -700,8 +752,12 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e_vd_ab" bpmnElement="Flow_ValidateDecision_Abgewiesen">
         <di:waypoint x="1885" y="365"/>
-        <di:waypoint x="1880" y="432"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="1891" y="395" width="23" height="14"/></bpmndi:BPMNLabel>
+        <di:waypoint x="1885" y="487"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1891" y="420" width="23" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_notify_ab_end" bpmnElement="Flow_NotifyAbgewiesen_End">
+        <di:waypoint x="1945" y="511"/>
+        <di:waypoint x="1990" y="511"/>
       </bpmndi:BPMNEdge>
 
       <!-- Info-Anfrage (jetzt zuerst) -->
@@ -747,8 +803,12 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e_cd_fail" bpmnElement="Flow_ComplianceDecision_Fail">
         <di:waypoint x="2330" y="760"/>
-        <di:waypoint x="2410" y="760"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2345" y="742" width="45" height="14"/></bpmndi:BPMNLabel>
+        <di:waypoint x="2360" y="760"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2335" y="742" width="45" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_notify_cf_end" bpmnElement="Flow_NotifyComplianceFail_End">
+        <di:waypoint x="2480" y="760"/>
+        <di:waypoint x="2510" y="760"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e16" bpmnElement="Flow_Join2_Approve">
         <di:waypoint x="2305" y="365"/>
@@ -769,8 +829,12 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e_gw_reject" bpmnElement="Flow_ApproveDecision_Reject">
         <di:waypoint x="2475" y="960"/>
-        <di:waypoint x="2562" y="960"/>
-        <bpmndi:BPMNLabel><dc:Bounds x="2503" y="942" width="23" height="14"/></bpmndi:BPMNLabel>
+        <di:waypoint x="2560" y="960"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="2495" y="942" width="23" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="e_notify_abl_end" bpmnElement="Flow_NotifyAbgelehnt_End">
+        <di:waypoint x="2680" y="960"/>
+        <di:waypoint x="2740" y="960"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e_berp_manual" bpmnElement="Flow_ERPFehler_Manual">
         <di:waypoint x="2468" y="640"/>
@@ -796,11 +860,13 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e24" bpmnElement="Flow_Payment_Eskalation">
         <di:waypoint x="2550" y="218"/>
-        <di:waypoint x="2550" y="720"/>
+        <di:waypoint x="2550" y="760"/>
+        <di:waypoint x="2650" y="760"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e_esk_end" bpmnElement="Flow_Eskalation_End">
-        <di:waypoint x="2540" y="720"/>
-        <di:waypoint x="2560" y="288"/>
+        <di:waypoint x="2770" y="760"/>
+        <di:waypoint x="2770" y="270"/>
+        <di:waypoint x="2578" y="270"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="e25" bpmnElement="Flow_Archive_End">
         <di:waypoint x="2780" y="160"/>

@@ -169,12 +169,15 @@ Siehe auch: `docs/sprint6/erklaerung-sprint6.md` → Abschnitt "Rechnungspositio
                                    │ gRPC (Port 26500)
                     ┌──────────────▼──────────────────────┐
                     │         Camunda Worker              │
-                    │      sprint4/camunda-worker.js      │
+                    │   camunda/camunda-worker.js         │
+                    │   (Bootstrap, laedt camunda/workers/)│
                     │  receive-invoice                    │
+                    │  ai-extract-invoice                 │
                     │  grpc-save-invoice ──────────────── ├──► gRPC Service :50051
                     │  rabbitmq-payment  ──────────────── ├──► RabbitMQ :5672
                     │  archive-invoice                    │         │
                     │  rpa-erp-entry ─────────────────── ├──► UiPath Bot (Orchestrator API)
+                    │  notify-supplier-rejection           │
                     └─────────────────────────────────────┘         │
 
                                                                      ▼
@@ -212,11 +215,14 @@ npm run trigger:email
         ▼
 [MANUELL] Rechnung pruefen und validieren  (Tasklist)
         │
+        ├─ nicht bestanden → [AUTO] notify-supplier-rejection → ENDE: "Rechnung abgewiesen"
         ├─ complianceNeeded → [MANUELL] Compliance Check (Finanzabteilung)
+        │       └─ nicht OK → [AUTO] notify-supplier-rejection → ENDE: "Compliance fehlgeschlagen"
         ├─ infoNeeded → [MANUELL] Info beim Lieferanten anfragen → erhalten
         ▼
 [MANUELL] Rechnung freigeben — Manager  (Tasklist)
         │
+        ├─ abgelehnt → [AUTO] notify-supplier-rejection → ENDE: "Rechnung abgelehnt"
         ▼
 [AUTO] rpa-erp-entry  ← Sprint 5: vollautomatisch per UiPath Bot
         Startet UiPath Job im Orchestrator via REST API
@@ -270,9 +276,23 @@ invoicing-system/
 ├── workflow-engine/                # Sprint 3: Eigene Workflow Engine (Port 3001)
 │   ├── server.js
 │   └── event-logger.js
+├── shared/                          # Wiederverwendete Infrastruktur-Module
+│   └── rabbitmq.js                 # Zentrale RabbitMQ-Verbindung (Reconnect, Channel-Cache)
 ├── camunda/                        # Sprint 4+5+6: Camunda-Implementierung
 │   ├── invoice-process.bpmn        # BPMN-Prozess (deployed in Camunda)
-│   ├── camunda-worker.js           # External Task Worker (6 Tasks)
+│   ├── camunda-worker.js           # Bootstrap: laedt + registriert alle Worker-Module
+│   ├── lib/                        # Geteilte Helfer fuer die Worker
+│   │   ├── grpc-client.js
+│   │   ├── event-log.js
+│   │   └── pdf-preview.js
+│   ├── workers/                    # Ein Task-Handler pro Datei (7 Tasks)
+│   │   ├── receive-invoice.js
+│   │   ├── ai-extract-invoice.js
+│   │   ├── grpc-save-invoice.js
+│   │   ├── rabbitmq-payment.js
+│   │   ├── rpa-erp-entry.js
+│   │   ├── archive-invoice.js
+│   │   └── notify-supplier-rejection.js   # Benachrichtigt Lieferant bei Ablehnung
 │   ├── trigger-from-email.js       # E-Mail-Simulation: Prozess starten
 │   ├── deploy-bpmn.js              # BPMN + Formulare deployen
 │   ├── cancel-incidents.js         # Hilfsskript: offene Incidents abbrechen
@@ -418,7 +438,7 @@ GET  /workflows
 | Artefakt | Datei | Beschreibung |
 |---|---|---|
 | BPMN Prozess | `camunda/invoice-process.bpmn` | Deployed in Camunda SaaS als `Process_Invoice` |
-| Camunda Worker | `camunda/camunda-worker.js` | Automatisiert alle Service Tasks |
+| Camunda Worker | `camunda/camunda-worker.js` (Bootstrap) + `camunda/workers/*.js` | Automatisiert alle Service Tasks, ein Handler pro Datei |
 | E-Mail-Trigger | `camunda/trigger-from-email.js` | Startet neuen Prozess |
 | Formular Erfassung | `camunda/forms/rechnungserfassung.form` | Manuelle Dateneingabe |
 | Formular Pruefung | `camunda/forms/freigabe.form` | Validierung und Freigabe |
@@ -475,6 +495,7 @@ npm run rpa:demo    # Sichtbarer Browser + Video
 | RPA-Bot schlaegt fehl | `rpa-erp-entry` | 2 automatische Wiederholungsversuche mit 5s Verzoegerung |
 | Camunda Cluster schlaeft | `trigger-from-email` | SDK wiederholt automatisch bis Cluster antwortet |
 | Payment Worker Verbindungsverlust | `payment-worker` | Exponentieller Backoff: 1s, 2s, 4s, 8s, max. 15s |
+| Rechnung abgewiesen/abgelehnt | `GW_ValidateDecision`, `GW_ComplianceDecision`, `GW_ApproveDecision` | `notify-supplier-rejection` informiert den Lieferanten (Grund + Zeitstempel) bevor der Prozess endet — kein stillschweigender Abbruch |
 
 ---
 
@@ -562,6 +583,15 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 | ✅ Idempotenter Start | Erkennt laufende Prozesse und startet nicht doppelt |
 | ✅ Aktive Port-Pruefung | Wartet bis Ports 50051 und 5672 tatsaechlich erreichbar sind |
 | ✅ npm Scripts fuer alle Operationen | Kein manuelles `node ...` noetig |
+
+### Code-Qualitaet (Feedback aus der Zwischenpraesentation)
+
+| Gefordert | Umsetzung |
+|---|---|
+| Keine "God Files" — Trennung der Verantwortlichkeiten | `camunda-worker.js` (vorher 416 Zeilen, 6 Handler + gRPC-Client + PDF-Rendering + RabbitMQ in einer Datei) aufgeteilt in `camunda/lib/` (geteilte Helfer) und `camunda/workers/` (ein Task-Handler pro Datei). `camunda-worker.js` ist jetzt nur noch ein 33-zeiliger Bootstrap |
+| Zentrale RabbitMQ-Verbindung statt Duplikate | Drei unabhaengige Reconnect-Implementierungen (`camunda-worker.js`, `payment-worker.js`, `workflow-engine/server.js`) durch ein gemeinsames Modul `shared/rabbitmq.js` ersetzt |
+| Konstanten aus `.env` statt hartcodiert | Verbindungsadressen/Ports (`GRPC_ADDRESS`, `RABBITMQ_URL`, `WORKFLOW_ENGINE_PORT`, `FRONTEND_PORT`) werden jetzt durchgaengig aus `.env` gelesen statt im Code zu stehen |
+| Prozess endet nicht stillschweigend bei Ablehnung | Neuer Worker `notify-supplier-rejection` — wird an allen drei Ablehnungspunkten im BPMN aufgerufen und informiert den Lieferanten ueber den Ablehnungsgrund, bevor der Prozess endet (siehe Fehlerbehandlung) |
 
 ---
 

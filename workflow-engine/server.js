@@ -1,15 +1,16 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
-const amqp = require('amqplib');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const { logEvent } = require('./event-logger');
+const { createChannelCache, consumeWithReconnect } = require('../shared/rabbitmq');
 
 const PROTO_PATH = path.join(__dirname, '../proto/invoice.proto');
-const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
+const GRPC_ADDRESS = process.env.GRPC_ADDRESS || '127.0.0.1:50051';
 const PAYMENT_QUEUE = 'payment_requests';
 const PAYMENT_STATUS_QUEUE = 'payment_status_updates';
-const PORT = 3001;
+const PORT = Number(process.env.WORKFLOW_ENGINE_PORT) || 3001;
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
@@ -20,13 +21,13 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 });
 
 const invoiceProto = grpc.loadPackageDefinition(packageDefinition).invoice;
-const grpcClient = new invoiceProto.InvoiceService('localhost:50051', grpc.credentials.createInsecure());
+const grpcClient = new invoiceProto.InvoiceService(GRPC_ADDRESS, grpc.credentials.createInsecure());
 
 const app = express();
 app.use(express.json());
 
 const workflows = new Map();
-let publishChannel = null;
+const getPublishChannel = createChannelCache({ assertQueues: [PAYMENT_QUEUE] });
 
 function getWorkflowId(invoiceId) {
   return `wf-${invoiceId}`;
@@ -85,49 +86,22 @@ function updateWorkflowStatusByPayment(paymentUpdate) {
   workflows.set(workflowId, workflow);
 }
 
-async function connectPublisher() {
-  const connection = await amqp.connect(RABBITMQ_URL);
-  const channel = await connection.createChannel();
-  await channel.assertQueue(PAYMENT_QUEUE, { durable: true });
-  publishChannel = channel;
-  connection.on('close', () => {
-    publishChannel = null;
+function startPaymentStatusConsumer() {
+  return consumeWithReconnect({
+    assertQueues: [PAYMENT_STATUS_QUEUE],
+    consumeQueue: PAYMENT_STATUS_QUEUE,
+    label: 'Workflow Engine (payment_status_updates)',
+    onMessage: (msg, channel) => {
+      try {
+        const paymentUpdate = JSON.parse(msg.content.toString());
+        updateWorkflowStatusByPayment(paymentUpdate);
+        channel.ack(msg);
+      } catch (error) {
+        console.error('Ungültiges Payment-Status-Event:', error.message);
+        channel.nack(msg, false, false);
+      }
+    },
   });
-  return channel;
-}
-
-async function startPaymentStatusConsumer() {
-  while (true) {
-    try {
-      const connection = await amqp.connect(RABBITMQ_URL);
-      const channel = await connection.createChannel();
-      await channel.assertQueue(PAYMENT_STATUS_QUEUE, { durable: true });
-
-      console.log('Workflow Engine lauscht auf payment_status_updates...');
-
-      connection.on('error', () => {});
-
-      await new Promise((resolve) => {
-        connection.on('close', resolve);
-
-        channel.consume(PAYMENT_STATUS_QUEUE, (msg) => {
-          if (msg === null) return;
-
-          try {
-            const paymentUpdate = JSON.parse(msg.content.toString());
-            updateWorkflowStatusByPayment(paymentUpdate);
-            channel.ack(msg);
-          } catch (error) {
-            console.error('Ungültiges Payment-Status-Event:', error.message);
-            channel.nack(msg, false, false);
-          }
-        }, { noAck: false });
-      });
-    } catch (error) {
-      console.error('Workflow Engine Consumer Fehler:', error.message);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-  }
 }
 
 app.post('/workflows/start', async (req, res) => {
@@ -176,10 +150,6 @@ app.post('/workflows/:workflowId/approve', async (req, res) => {
     return res.status(409).json({ error: `Workflow ist nicht genehmigungsfähig (Status: ${workflow.status}).` });
   }
 
-  if (!publishChannel) {
-    return res.status(503).json({ error: 'Payment-Kanal ist nicht verfügbar. RabbitMQ prüfen.' });
-  }
-
   try {
     const invoice = await getInvoice(workflow.invoiceId);
 
@@ -192,6 +162,7 @@ app.post('/workflows/:workflowId/approve', async (req, res) => {
       source: 'workflow-engine',
     };
 
+    const publishChannel = await getPublishChannel();
     publishChannel.sendToQueue(PAYMENT_QUEUE, Buffer.from(JSON.stringify(paymentOrder)), { persistent: true });
 
     workflow.status = 'PAYMENT_IN_PROGRESS';
@@ -222,7 +193,7 @@ app.get('/workflows', (req, res) => {
 
 async function bootstrap() {
   try {
-    await connectPublisher();
+    await getPublishChannel();
     startPaymentStatusConsumer();
 
     app.listen(PORT, () => {

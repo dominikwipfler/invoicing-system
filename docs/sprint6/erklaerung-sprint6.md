@@ -162,7 +162,7 @@ GW_AIConfidence   (Exclusive Gateway: "KI-Extraktion zuverlässig?")
 - `Task_Register` (manuelle Datenerfassung) dient weiterhin als Fallback in der
   gRPC-Fehlerkorrektur-Schleife
 
-### `camunda/camunda-worker.js` – Neuer Task-Handler
+### `camunda/workers/ai-extract-invoice.js` – Neuer Task-Handler
 
 Neuer Worker für den Task-Typ `ai-extract-invoice`:
 

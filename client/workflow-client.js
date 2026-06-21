@@ -1,3 +1,7 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
+const WORKFLOW_ENGINE_URL = `http://localhost:${process.env.WORKFLOW_ENGINE_PORT || 3001}`;
+
 const workflowInvoice = {
   id: 'WF-1001',
   supplier_name: 'Workflow Demo GmbH',
@@ -7,7 +11,7 @@ const workflowInvoice = {
 };
 
 async function runWorkflowDemo() {
-  const startResponse = await fetch('http://localhost:3001/workflows/start', {
+  const startResponse = await fetch(`${WORKFLOW_ENGINE_URL}/workflows/start`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -23,7 +27,7 @@ async function runWorkflowDemo() {
 
   console.log('Workflow gestartet:', startedWorkflow);
 
-  const approveResponse = await fetch(`http://localhost:3001/workflows/${startedWorkflow.workflowId}/approve`, {
+  const approveResponse = await fetch(`${WORKFLOW_ENGINE_URL}/workflows/${startedWorkflow.workflowId}/approve`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -40,7 +44,7 @@ async function runWorkflowDemo() {
   console.log('Warte auf asynchrone Zahlungsverarbeitung...');
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  const finalResponse = await fetch(`http://localhost:3001/workflows/${startedWorkflow.workflowId}`);
+  const finalResponse = await fetch(`${WORKFLOW_ENGINE_URL}/workflows/${startedWorkflow.workflowId}`);
   const finalWorkflow = await finalResponse.json();
 
   if (!finalResponse.ok) {

@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const { exec } = require('child_process');
 const fs = require('fs');
@@ -20,7 +21,10 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/invoices', express.static(path.join(__dirname, '..', 'ai-agent')));
 
-const PORT = config.server.port;
+// FRONTEND_PORT (.env) überschreibt config.json, falls gesetzt — config.json bleibt
+// die Quelle für die übrigen, an die Camunda-Cloud-Instanz gebundenen Werte (region/clusterId),
+// die nicht pro Umgebung variieren.
+const PORT = Number(process.env.FRONTEND_PORT) || config.server.port;
 const projectRoot = path.join(__dirname, '..');
 const eventLogPath = path.join(projectRoot, config.paths.eventLog);
 const pidFilePath = path.join(projectRoot, config.paths.pidFile);
@@ -39,7 +43,7 @@ app.get('/', (req, res) => {
 // GET /api/config → Sende Konfiguration ans Frontend (für URLs)
 app.get('/api/config', (req, res) => {
   res.json({
-    port: config.server.port,
+    port: PORT,
     camunda: config.camunda
   });
 });
