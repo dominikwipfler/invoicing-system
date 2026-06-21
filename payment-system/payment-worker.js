@@ -1,7 +1,10 @@
 const amqp = require('amqplib');
 const { logEvent } = require('./event-logger');
 
-const RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';
+// 'localhost' löst unter Windows manchmal zu IPv6 (::1) auf, wo Docker Desktop/WSL2
+// das AMQP-Forwarding nicht zuverlässig übernimmt ("Socket closed abruptly during
+// opening handshake") — daher feste IPv4-Adresse, analog zu camunda-worker.js.
+const RABBITMQ_URL = 'amqp://guest:guest@127.0.0.1:5672';
 const QUEUE_NAME = 'payment_requests';
 const PAYMENT_STATUS_QUEUE = 'payment_status_updates';
 const INITIAL_BACKOFF_MS = 1000;
