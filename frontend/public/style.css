@@ -673,6 +673,116 @@ body {
   }
 }
 
+/* ─ HISTORY GROUPED VIEW ────────────────────────────────────────────── */
+.history-process {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-md);
+  background-color: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.history-process-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto auto;
+  gap: var(--sp-md);
+  align-items: center;
+  padding: var(--sp-md);
+  cursor: pointer;
+  background-color: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border);
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.history-process-header:hover {
+  background-color: var(--color-bg);
+}
+
+.history-chevron {
+  font-size: var(--fs-base);
+  font-weight: bold;
+  color: var(--color-text-light);
+  min-width: 20px;
+}
+
+.history-case-id {
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: 'Courier New', monospace;
+  font-size: var(--fs-sm);
+}
+
+.history-process-type {
+  color: var(--color-text-light);
+  font-size: var(--fs-sm);
+}
+
+.history-status {
+  font-size: var(--fs-base);
+  min-width: 20px;
+  text-align: center;
+}
+
+.history-time-range {
+  color: var(--color-text-light);
+  font-size: var(--fs-sm);
+}
+
+.history-event-count {
+  color: var(--color-text-light);
+  font-size: var(--fs-sm);
+  opacity: 0.7;
+}
+
+/* Aufgeklappte Events */
+.history-events-expanded {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  padding: var(--sp-md);
+  border-top: 1px solid var(--color-border);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.history-event-item {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
+  border-left: 2px solid var(--color-primary);
+  margin-left: var(--sp-sm);
+  margin-bottom: var(--sp-sm);
+  font-size: var(--fs-sm);
+}
+
+.history-event-item:last-child {
+  margin-bottom: 0;
+}
+
+.history-event-time {
+  color: var(--color-text-light);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.history-event-activity {
+  color: var(--color-text);
+}
+
 @media (max-width: 480px) {
   .action-bar {
     grid-template-columns: 1fr;

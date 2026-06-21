@@ -59,6 +59,7 @@ const liveCaseId = document.getElementById('live-case-id');
 
 // ── STATE ──────────────────────────────────────────────────────────────
 let currentMode = 'live';
+let expandedProcesses = new Set(); // Merke aufgeklappte Prozesse in der Historie
 
 // ── PROZESS-HISTORY (localStorage) ────────────────────────────────────
 const HISTORY_KEY = 'invoicing_process_history';
@@ -255,6 +256,125 @@ function switchMode(mode) {
 }
 
 /**
+ * Bestimme Prozess-Typ aus erster Activity
+ */
+function getProcessType(firstActivity) {
+  if (firstActivity.includes('Standard')) return 'Standard-Rechnung';
+  if (firstActivity.includes('Compliance')) return 'Compliance-Fall';
+  if (firstActivity.includes('Manual')) return 'Manuelle Korrektur';
+  return 'Prozess';
+}
+
+/**
+ * Bestimme Status-Emoji basierend auf letztem Event
+ */
+function getStatusEmoji(lastActivity) {
+  if (lastActivity.includes('gRPC Save Success') || lastActivity.includes('Archive')) {
+    return '✅';
+  }
+  if (lastActivity.includes('Error') || lastActivity.includes('Fehler')) {
+    return '❌';
+  }
+  return '⏳';
+}
+
+/**
+ * Gruppiere Events nach case_id und rendere aufklappbar
+ */
+function renderHistoryGrouped(events) {
+  if (!events || events.length === 0) {
+    eventLog.innerHTML = '<div class="event-placeholder">Keine Prozesse in der Historie</div>';
+    return;
+  }
+
+  // Gruppiere Events nach case_id
+  const grouped = new Map();
+  events.forEach(event => {
+    if (!grouped.has(event.case_id)) {
+      grouped.set(event.case_id, []);
+    }
+    grouped.get(event.case_id).push(event);
+  });
+
+  // Sortiere Gruppen absteigend nach erstem Event (neueste oben)
+  const sortedGroups = Array.from(grouped.entries()).sort((a, b) => {
+    const timeA = new Date(a[1][0].timestamp || 0);
+    const timeB = new Date(b[1][0].timestamp || 0);
+    return timeB - timeA;
+  });
+
+  eventLog.innerHTML = '';
+
+  sortedGroups.forEach(([caseId, caseEvents]) => {
+    const isExpanded = expandedProcesses.has(caseId);
+    const firstActivity = caseEvents[0].activity || '';
+    const lastActivity = caseEvents[caseEvents.length - 1].activity || '';
+    const processType = getProcessType(firstActivity);
+    const statusEmoji = getStatusEmoji(lastActivity);
+
+    const firstTime = new Date(caseEvents[0].timestamp);
+    const lastTime = new Date(caseEvents[caseEvents.length - 1].timestamp);
+    const timeRange = `${firstTime.toLocaleTimeString('de-DE')} – ${lastTime.toLocaleTimeString('de-DE')}`;
+
+    // Prozess-Container
+    const processContainer = document.createElement('div');
+    processContainer.className = 'history-process';
+    processContainer.dataset.caseId = caseId;
+
+    // Prozess-Header (klickbar)
+    const processHeader = document.createElement('div');
+    processHeader.className = 'history-process-header';
+    processHeader.innerHTML = `
+      <span class="history-chevron">${isExpanded ? '▼' : '▶'}</span>
+      <span class="history-case-id">${caseId}</span>
+      <span class="history-process-type">${processType}</span>
+      <span class="history-status">${statusEmoji}</span>
+      <span class="history-time-range">${timeRange}</span>
+      <span class="history-event-count">${caseEvents.length} Events</span>
+    `;
+
+    processHeader.addEventListener('click', () => {
+      // Toggle Zustand
+      if (expandedProcesses.has(caseId)) {
+        expandedProcesses.delete(caseId);
+      } else {
+        expandedProcesses.add(caseId);
+      }
+      // Neu rendern
+      renderHistoryGrouped(events);
+    });
+
+    processContainer.appendChild(processHeader);
+
+    // Events-Container (aufklappbar)
+    if (isExpanded) {
+      const eventsContainer = document.createElement('div');
+      eventsContainer.className = 'history-events-expanded';
+
+      caseEvents.forEach(event => {
+        const eventItem = document.createElement('div');
+        eventItem.className = 'history-event-item';
+
+        const time = event.timestamp ? new Date(event.timestamp).toLocaleTimeString('de-DE') : '-';
+        const activity = event.activity || '-';
+        const resource = event.resource ? `[${event.resource}]` : '';
+
+        eventItem.innerHTML = `
+          <span class="history-event-time">${time}</span>
+          <span class="history-event-activity">${activity} ${resource}</span>
+        `;
+
+        eventsContainer.appendChild(eventItem);
+      });
+
+      processContainer.appendChild(eventsContainer);
+    }
+
+    eventLog.appendChild(processContainer);
+  });
+}
+
+/**
  * Lade und zeige Event-Log
  */
 async function refreshEventLog() {
@@ -278,29 +398,28 @@ async function refreshEventLog() {
       return;
     }
 
-    eventLog.innerHTML = '';
-    data.events.forEach(event => {
-      const eventItem = document.createElement('div');
-      eventItem.className = 'event-item';
+    // Nutze groupiertes Rendering in Historia-Modus
+    if (currentMode === 'history') {
+      renderHistoryGrouped(data.events);
+    } else {
+      // Live-Modus: flache Event-Liste (unverändert)
+      eventLog.innerHTML = '';
+      data.events.forEach(event => {
+        const eventItem = document.createElement('div');
+        eventItem.className = 'event-item';
 
-      const time = event.timestamp ? new Date(event.timestamp).toLocaleTimeString('de-DE') : '-';
-      const activity = event.activity || '-';
-      const resource = event.resource ? `[${event.resource}]` : '';
+        const time = event.timestamp ? new Date(event.timestamp).toLocaleTimeString('de-DE') : '-';
+        const activity = event.activity || '-';
+        const resource = event.resource ? `[${event.resource}]` : '';
 
-      // In Historie-Modus: zeige case_id als Badge
-      let caseIdBadge = '';
-      if (currentMode === 'history' && event.case_id) {
-        caseIdBadge = `<span class="event-case-id">${event.case_id}</span>`;
-      }
+        eventItem.innerHTML = `
+          <span class="event-time">${time}</span>
+          <span class="event-activity">${activity} ${resource}</span>
+        `;
 
-      eventItem.innerHTML = `
-        <span class="event-time">${time}</span>
-        <span class="event-activity">${activity} ${resource}</span>
-        ${caseIdBadge}
-      `;
-
-      eventLog.appendChild(eventItem);
-    });
+        eventLog.appendChild(eventItem);
+      });
+    }
 
     if (isAtBottom) {
       eventLog.scrollTop = eventLog.scrollHeight;
