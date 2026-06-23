@@ -44,8 +44,6 @@ AI_MOCK_MODE=true npm run trigger:email:standard
 AI_MOCK_MODE=true npm run trigger:email:compliance
 ```
 
-Siehe auch: [Pfad-Test-Anleitung](#-test-anleitung-jeden-pfad-durchtesten) für Details zum gezielten Durchtesten jeden Prozesspfads.
-
 **Playwright-Bot isoliert ausfuehren** (nur fuer Tests/Demos — laeuft nie automatisch im Prozess):
 
 ```powershell
@@ -65,7 +63,7 @@ npm run deploy:bpmn
 
 **Zentrales Demo- und Steuerungs-Dashboard** für den kompletten Rechnungsverarbeitungs-Workflow.
 
-```
+```text
 http://localhost:4000
 ```
 
@@ -93,6 +91,7 @@ Browser öffnet sich automatisch (Edge/Chrome). Fallback-Warnung, falls kein Bro
 ### Herunterfahren
 
 Klick auf **🔴 Herunterfahren** im Cockpit:
+
 1. Sendet `POST /api/shutdown` an den Frontend-Server
 2. Beendet alle Backend-Services
 3. Schließt Browser automatisch
@@ -127,18 +126,19 @@ ANTHROPIC_API_KEY=sk-ant-...  # Von https://console.anthropic.com
 
 Nutzt Anthropic Claude Haiku direkt zur Dokumentenanalyse (höhere Genauigkeit, höhere Kosten).
 
-### Beide Provider testen:
+### Beide Provider testen
 
 ```powershell
 npm run ai:test-extract         # Claude (wenn konfiguriert)
 npm run ai:test-extract-n8n     # n8n + Gemini
 ```
 
-**Hinweis:** Beide Provider liefern identisches Output-Format und werden im BPMN-Gateway `GW_AIConfidence` gleich behandelt. 
+**Hinweis:** Beide Provider liefern identisches Output-Format und werden im BPMN-Gateway `GW_AIConfidence` gleich behandelt.
 
 ### Rechnungspositionen (lineItems)
 
 Die KI-Extraktion erfasst auch **Rechnungspositionen** (lineItems):
+
 - Jede Position: Beschreibung, Menge, Einheit, Einzelpreis
 - Wird per IoMapping durch BPMN propagiert
 - RPA-Bot füllt mehrere Positionen im ERP-Formular ein (+ Knopf "Position hinzufügen")
@@ -151,7 +151,7 @@ Siehe auch: `docs/sprint6/erklaerung-sprint6.md` → Abschnitt "Rechnungspositio
 ## Voraussetzungen
 
 | Voraussetzung | Version | Zweck |
-|---|---|---|
+| --- | --- | --- |
 | Node.js | 22.x LTS+ | Alle Services und Worker |
 | Docker Desktop | aktuell | RabbitMQ Container |
 | Camunda 8 SaaS | — | BPMN-Prozessausfuehrung |
@@ -161,7 +161,7 @@ Siehe auch: `docs/sprint6/erklaerung-sprint6.md` → Abschnitt "Rechnungspositio
 
 ## Systemarchitektur
 
-```
+```text
                     ┌─────────────────────────────────────┐
                     │         Camunda 8 SaaS              │
                     │   (Process_Invoice, bru-2)          │
@@ -187,9 +187,9 @@ Stoppt automatisch alle gestarteten Dienste (RabbitMQ, gRPC Service, Payment Wor
 
 ## Vollstaendiger Prozessablauf
 
-### Mit automatischem Camunda Worker (empfohlen):
+### Mit automatischem Camunda Worker (empfohlen)
 
-```
+```text
 npm run trigger:email
         │
         │   Camunda startet neue Prozessinstanz
@@ -244,7 +244,7 @@ npm run trigger:email
 Die folgenden Dateien werden **zur Laufzeit automatisch generiert** und sind **nicht versioniert** (in `.gitignore`):
 
 | Datei | Zweck | Generiert von |
-|-------|-------|---------------|
+| ------- | ------- | --------------- |
 | `event-log.csv` (root + Service-Dir) | Prozess-Event Log für Process Mining | `logEvent()` in Camunda Worker / Service-Logs |
 | `consolidated-event-log.csv` | Konsolidierte Event-Log über alle Services | `npm run analyze:events` |
 | `rpa/screenshots/*.png` | Screenshots vor/nach ERP-Eingabe (Audit-Trail) | Playwright RPA Bot |
@@ -256,7 +256,7 @@ Die folgenden Dateien werden **zur Laufzeit automatisch generiert** und sind **n
 
 ## Projektstruktur
 
-```
+```text
 invoicing-system/
 ├── grpc-service/                   # Sprint 1: gRPC Server (Port 50051)
 │   ├── server.js
@@ -299,7 +299,7 @@ invoicing-system/
 ## npm Scripts
 
 | Befehl | Beschreibung |
-|---|---|
+| --- | --- |
 | `npm run start:servers` | RabbitMQ + gRPC + Payment Worker + Camunda Worker starten |
 | `npm run stop:servers` | Alle Dienste stoppen |
 | `npm run trigger:email` | Neuen Prozess per E-Mail-Simulation starten |
@@ -324,7 +324,7 @@ invoicing-system/
 **Aufgabe:** gRPC Service, Zahlungssystem via Messaging, Client
 
 | Komponente | Datei | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | gRPC Service | `grpc-service/server.js` | Speichert und liefert Rechnungsmetadaten (Port 50051) |
 | Payment Worker | `payment-system/payment-worker.js` | Verarbeitet Zahlungsauftraege aus RabbitMQ |
 | gRPC Client | `client/invoice-client.js` | Testet Speichern und Abrufen |
@@ -332,6 +332,7 @@ invoicing-system/
 | Proto-Definition | `proto/invoice.proto` | gRPC Schnittstellenvertrag |
 
 Testen:
+
 ```powershell
 npm run start:servers
 npm run check:integration
@@ -353,7 +354,7 @@ Celonis-Import: `consolidated-event-log.csv` — Spalten: `case_id`, `activity`,
 Prozessvarianten:
 
 | Variante | Anteil | Ablauf |
-|---|---|---|
+| --- | --- | --- |
 | A — Happy Path | 60% | Rechnung empfangen → gespeichert → Zahlung verarbeitet |
 | B — Payment Retry | 20% | Zahlung schlaegt fehl → wird wiederholt |
 | C — Duplicate Invoice | 10% | Zweite identische Rechnung wird abgewiesen |
@@ -368,14 +369,15 @@ Dokumentation: `docs/sprint2/erklaerung-sprint2.md`
 **Aufgabe:** BPMN Soll-Prozess, Systemarchitektur, Optimierungspotenziale
 
 | Artefakt | Datei |
-|---|---|
+| --- | --- |
 | BPMN Soll-Prozess | `docs/sprint3/sollprozess.bpmn` |
 | Zielarchitektur | `docs/sprint3/zielarchitektur.md` |
 | Optimierungspotenziale | `docs/sprint3/optimierungspotenziale.md` |
 | Eigene Workflow Engine | `workflow-engine/server.js` (Port 3001) |
 
 Workflow Engine Endpunkte:
-```
+
+```text
 POST /workflows/start
 POST /workflows/:workflowId/approve
 GET  /workflows/:workflowId
@@ -389,7 +391,7 @@ GET  /workflows
 **Aufgabe:** Digitaler Freigabeprozess in Camunda 8
 
 | Artefakt | Datei | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | BPMN Prozess | `camunda/invoice-process.bpmn` | Deployed in Camunda SaaS als `Process_Invoice` |
 | Camunda Worker | `camunda/camunda-worker.js` | Automatisiert alle Service Tasks |
 | E-Mail-Trigger | `camunda/trigger-from-email.js` | Startet neuen Prozess |
@@ -400,10 +402,10 @@ GET  /workflows
 Camunda URLs:
 
 | Tool | URL |
-|---|---|
-| Tasklist | https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
-| Operate | https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e |
-| Web Modeler | https://modeler.camunda.io |
+| --- | --- |
+| Tasklist | <https://bru-2.tasklist.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e> |
+| Operate | <https://bru-2.operate.camunda.io/487e2664-45fe-4a21-9e53-860eddc37e5e> |
+| Web Modeler | <https://modeler.camunda.io> |
 
 ---
 
@@ -414,7 +416,7 @@ Camunda URLs:
 ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 
 | Teilaufgabe | Umsetzung | Status |
-|---|---|---|
+| --- | --- | --- |
 | 5.1 UiPath Bot erstellen | UiPath Studio Web — App/Web Recorder | ✅ |
 | 5.2 Bot testen | Debug on cloud in Studio Web (11+ erfolgreiche Runs) | ✅ |
 | 5.3 Unattended Bot in Orchestrator | Paket publiziert, Process `ERP-Rechnungserfassung` in Solution Folder angelegt | ✅ |
@@ -422,6 +424,7 @@ ERP-URL: `https://anhe0003.github.io/this-and-that/ERP_Rechnungserfassung.html`
 | 5.3 Vollautomatischer API-Trigger | Nicht moeglich — HKA-Bildungslizenz enthaelt keine Unattended Robot Ausfuehrung via API | ⚠️ |
 
 **UiPath Bot** (`cloud.uipath.com`, Tenant `hkalshnhxm`):
+
 - Aufgezeichnet mit App/Web Recorder
 - Befuellt alle ERP-Felder automatisch (Rechnungsnummer, Datum, Lieferant, Betrag, MwSt.)
 - Laeuft als Unattended Process im Orchestrator (Shared Folder)
@@ -440,14 +443,89 @@ npm run rpa:demo    # Sichtbarer Browser + Video
 ## Fehlerbehandlung
 
 | Fehlerfall | Wo | Verhalten |
-|---|---|---|
-| gRPC nicht erreichbar | `grpc-save-invoice` | Boundary Error → Korrektur-Task fuer Sachbearbeiter → Retry |
+| --- | --- | --- |
+| gRPC nicht erreichbar (kurzer Aussetzer) | `grpc-save-invoice` | Automatischer Zeebe-Retry (3x, 2s Backoff) — kein Sachbearbeiter-Eingriff |
+| gRPC dauerhaft nicht erreichbar | `grpc-save-invoice` | Nach 3 gescheiterten Retries: Incident in Operate (kontrolliert pausiert) |
+| gRPC liefert Datenfehler (z.B. Duplikat) | `grpc-save-invoice` | Boundary Error → Korrektur-Task fuer Sachbearbeiter → Retry |
 | Daten unvollstaendig | `grpc-save-invoice` | Gateway → Task "Fehlende Daten ergaenzen" |
-| RabbitMQ nicht erreichbar | `rabbitmq-payment` | Boundary Error → End Event "Zahlung fehlgeschlagen" |
-| Zahlung schlaegt fehl (10%) | `payment-worker` | Nachricht bleibt in Queue → automatischer Retry |
+| RabbitMQ nicht erreichbar (kurzer Aussetzer) | `rabbitmq-payment` | Automatischer Zeebe-Retry (3x, 2s Backoff) — kein Sachbearbeiter-Eingriff |
+| RabbitMQ dauerhaft nicht erreichbar | `rabbitmq-payment` | Nach 3 gescheiterten Retries: Boundary Error → Eskalations-Task "Zahlung manuell pruefen" (Finanzabteilung) → End Event "Zahlung fehlgeschlagen" |
+| Zahlung schlaegt fehl (10%, simuliert) | `payment-worker` | Nachricht bleibt in Queue → automatischer Retry |
 | RPA-Bot schlaegt fehl | `rpa-erp-entry` | 2 automatische Wiederholungsversuche mit 5s Verzoegerung |
 | Camunda Cluster schlaeft | `trigger-from-email` | SDK wiederholt automatisch bis Cluster antwortet |
 | Payment Worker Verbindungsverlust | `payment-worker` | Exponentieller Backoff: 1s, 2s, 4s, 8s, max. 15s |
+
+### Service-Ausfall manuell testen
+
+Sowohl der gRPC-Service als auch RabbitMQ lassen sich gezielt stoppen, um die Fehlerbehandlung
+live zu beobachten. Es gibt jeweils zwei Testfaelle: ein **dauerhafter** Ausfall (zeigt Retry +
+Eskalation/Incident) und ein **kurzer** Aussetzer (zeigt, dass er komplett unsichtbar abgefangen
+wird). Wichtig: nach jeder Code-Aenderung an `camunda-worker.js` den Worker-Prozess neu starten
+(`.\Stop-Server.ps1` + `.\Start-Server.ps1`, oder den Node-Prozess gezielt killen), sonst laeuft
+noch der alte Code im Speicher.
+
+#### gRPC-Service — dauerhafter Ausfall (Punkt 2: Incident statt Sachbearbeiter-Aufgabe)
+
+```powershell
+# 1. gRPC-Service stoppen
+$grpcPid = (Get-NetTCPConnection -LocalPort 50051 | Where-Object State -eq 'Listen').OwningProcess
+Stop-Process -Id $grpcPid -Force
+
+# 2. Neue Prozessinstanz starten
+npm run trigger:email
+```
+
+Im Camunda-Worker-Fenster erscheinen 3 Fehlversuche (`Service nicht erreichbar — Zeebe-Retry`,
+Retries 2 → 1 → 0), danach in Operate ein Incident vom Typ "No more retries left" am Task
+"Metadaten per gRPC speichern". **Keine** Aufgabe in der Tasklist.
+
+Auflösen:
+
+```powershell
+node grpc-service/server.js
+```
+
+Danach in Operate: Instanz oeffnen → Incident → **Retry**.
+
+#### gRPC-Service — kurzer Aussetzer (zeigt: kein Incident, kein Sachbearbeiter-Eingriff)
+
+```powershell
+$grpcPid = (Get-NetTCPConnection -LocalPort 50051 | Where-Object State -eq 'Listen').OwningProcess
+Stop-Process -Id $grpcPid -Force
+Start-Job -ScriptBlock {
+    Set-Location "<Projektpfad>"
+    Get-Content -Path "event-log.csv" -Wait -Tail 0 | ForEach-Object {
+        if ($_ -match "gRPC Save Failed") { node grpc-service/server.js }
+    }
+} | Out-Null
+npm run trigger:email
+```
+
+Erwartung: genau **ein** Fehlversuch im Log, dann sofort `... gespeichert` — kein Incident,
+keine Aufgabe.
+
+#### RabbitMQ — dauerhafter Ausfall (Punkt 3: Eskalation an Finanzabteilung)
+
+```powershell
+docker stop rabbitmq
+npm run trigger:email:standard
+```
+
+Tasklist durchklicken: **Rechnung pruefen und validieren** (genehmigt, Haken "Info..." aus) →
+**Rechnung freigeben** (genehmigt). Nach automatischer ERP-Erfassung (Playwright) erscheinen im
+Worker-Fenster 3 Fehlversuche (`RabbitMQ nicht erreichbar — Zeebe-Retry`, Retries 2 → 1 → 0),
+danach in der Tasklist die neue Aufgabe **"Zahlung manuell pruefen"** mit der Fehlermeldung im
+Formular. Nach Abschluss laeuft die Instanz zum End Event "Zahlung fehlgeschlagen" (nicht zum
+Erfolgs-Ende "Rechnung verarbeitet" — pruefbar z.B. ueber `event-log.csv`: es darf danach kein
+`Invoice Archived`-Eintrag fuer diese Rechnung mehr folgen).
+
+Danach wieder starten: `docker start rabbitmq`
+
+#### RabbitMQ — kurzer Aussetzer
+
+Gleiches Prinzip wie beim gRPC-Aussetzer-Test, nur mit `docker stop rabbitmq` /
+`docker start rabbitmq` und Ueberwachung auf `"Payment Send Failed"` im Event-Log statt
+`"gRPC Save Failed"`.
 
 ---
 
@@ -458,7 +536,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ### Sprint 1 — Bausteine
 
 | Gefordert | Extra | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | gRPC Service | | Speichert Rechnungsmetadaten auf Port 50051 |
 | Zahlungssystem via Messaging | | RabbitMQ Payment Worker |
 | Client | | `invoice-client.js` + `send-payment.js` |
@@ -473,7 +551,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ### Sprint 2 — Process Mining
 
 | Gefordert | Extra | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | Celonis Process Mining | | Import und Analyse durchgefuehrt |
 | Prozessvarianten + Bottlenecks | | Dokumentiert in `docs/sprint2/` |
 | | ✅ Prozess-Simulation | 50 Rechnungsfaelle mit 4 Varianten generiert — kein manuelles Erzeugen noetig |
@@ -483,7 +561,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ### Sprint 3 — Soll-Prozess
 
 | Gefordert | Extra | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | BPMN Soll-Prozess | | `docs/sprint3/sollprozess.bpmn` |
 | Systemarchitektur | | `docs/sprint3/zielarchitektur.md` |
 | | ✅ Eigene Workflow Engine | Vollstaendige REST API mit Endpunkten; aktualisiert Prozessstatus automatisch wenn Zahlung eintrifft |
@@ -491,7 +569,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ### Sprint 4 — Workflow Implementierung
 
 | Gefordert | Extra | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | Start per E-Mail | | Start-Event im BPMN |
 | Manuelle Metadaten-Extraktion | | `rechnungserfassung.form` |
 | Speicherung per gRPC | | `grpc-save-invoice` Worker |
@@ -511,7 +589,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ### Sprint 5 — RPA
 
 | Gefordert | Extra | Beschreibung |
-|---|---|---|
+| --- | --- | --- |
 | UiPath Bot erstellen (5.1) | | Bot in UiPath Studio Web mit App/Web Recorder aufgezeichnet |
 | Bot testen (5.2) | | Erfolgreich getestet (Debug on cloud, 11 erfolgreiche Runs) |
 | Unattended Bot in Orchestrator (5.3) | | Paket publiziert, Process `ERP-Rechnungserfassung` in Shared Folder angelegt |
@@ -528,7 +606,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ### Infrastruktur (sprintuebergreifend)
 
 | Extra | Beschreibung |
-|---|---|
+| --- | --- |
 | ✅ Ein-Kommando-Start | `npm run start:servers` startet alle 4 Dienste automatisch |
 | ✅ Camunda Worker im eigenen Fenster | Oeffnet sich automatisch separat damit Job-Logs sichtbar sind |
 | ✅ Ein-Kommando-Stop | Beendet alle 4 Dienste sauber, auch ohne gespeicherte PIDs |
@@ -541,7 +619,7 @@ Uebersicht was pro Sprint gefordert war und was zusaetzlich implementiert wurde.
 ## Troubleshooting
 
 | Problem | Loesung |
-|---|---|
+| --- | --- |
 | `ECONNREFUSED 50051` | `npm run start:servers` ausfuehren |
 | `ECONNREFUSED 5672` | Docker Desktop starten, dann `npm run start:servers` |
 | Camunda 504 beim Trigger | Operate im Browser oeffnen (Cluster aufwecken), dann erneut versuchen |
