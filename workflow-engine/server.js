@@ -1,8 +1,8 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
 const express = require('express');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
-const path = require('path');
+const path = require('node:path');
 const { logEvent } = require('./event-logger');
 const { createChannelCache, consumeWithReconnect } = require('../shared/rabbitmq');
 

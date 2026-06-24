@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
 const { logEvent } = require('./event-logger');
 const { consumeWithReconnect } = require('../shared/rabbitmq');
 

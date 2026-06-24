@@ -1,6 +1,6 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const Anthropic = require('@anthropic-ai/sdk');
-const fs = require('fs');
+const fs = require('node:fs');
 
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.AI_CONFIDENCE_THRESHOLD || '0.8');
 

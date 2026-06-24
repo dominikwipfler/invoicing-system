@@ -1,8 +1,8 @@
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('dotenv').config({ path: require('node:path').join(__dirname, '..', '.env') });
 const express = require('express');
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+const { exec } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
 
 function runCommand(cmd, opts) {
   return new Promise((resolve, reject) => {
