@@ -11,12 +11,12 @@ function normalizeDate(raw) {
 module.exports = {
   taskType: 'grpc-save-invoice',
   taskHandler: async (job) => {
-    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate, aiConfidence } = job.variables;
+    const { invoiceId, supplierName, invoiceNumber, amountEuro, invoiceDate, aiConfidence, requiresHumanReview } = job.variables;
 
-    // Prüfen ob alle Pflichtfelder vorhanden sind UND KI-Konfidenz ausreichend
-    const hasMinConfidence = aiConfidence !== undefined ? parseFloat(aiConfidence) >= 0.5 : false;
-    const allFieldsPresent = !!(invoiceId && supplierName && invoiceNumber && amountEuro && invoiceDate);
-    const dataComplete = allFieldsPresent && hasMinConfidence;
+    // Prüfen ob alle Pflichtfelder vorhanden sind UND KI-Konfidenz ausreichend (Schwelle wie n8n/Gemini: 0.8)
+    const hasMinConfidence = aiConfidence !== undefined ? parseFloat(aiConfidence) >= 0.8 : false;
+    const allFieldsPresent = !!(supplierName && invoiceNumber && amountEuro && invoiceDate);
+    const dataComplete = allFieldsPresent && hasMinConfidence && !requiresHumanReview;
 
     // amountCents: verwende 0 wenn null/undefined, nicht eine Garbage-Zahl
     const amountCents = amountEuro ? Math.round(parseFloat(amountEuro) * 100) : 0;
