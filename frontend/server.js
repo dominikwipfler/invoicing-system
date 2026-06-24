@@ -136,10 +136,11 @@ app.post('/api/trigger/manual', async (req, res) => {
 
 // GET /api/process-activity → Process Activity Feed mit mode Parameter
 // ?mode=live   → nur Events der aktuellen case_id
-// ?mode=history → letzte 15-20 Events (default)
+// ?mode=history → letzte N Prozesse (alle ihre Events), default 50, steuerbar via ?maxProcesses=
 app.get('/api/process-activity', (req, res) => {
   try {
     const mode = req.query.mode || 'history';
+    const maxProcesses = parseInt(req.query.maxProcesses, 10) || 50;
 
     if (!fs.existsSync(eventLogPath)) {
       res.json({ events: [], mode, lastTriggeredCaseId });
@@ -196,8 +197,22 @@ app.get('/api/process-activity', (req, res) => {
         return caseId === lastTriggeredCaseId;
       });
     } else {
-      // history: letzte 15-20 Events
-      filteredLines = dataLines.slice(-20);
+      // history: letzte N PROZESSE (eindeutige case_ids), nicht letzte N Events —
+      // sonst verdrängen viele kurze Prozesse (wenig Events) die älteren mit mehr Events.
+      const caseIdOrder = [];
+      const caseIdLines = new Map();
+      dataLines.forEach(line => {
+        const caseId = line.split(',')[0].trim();
+        if (!caseIdLines.has(caseId)) {
+          caseIdOrder.push(caseId);
+          caseIdLines.set(caseId, []);
+        }
+        caseIdLines.get(caseId).push(line);
+      });
+
+      // Neueste Prozesse zuerst (Reihenfolge im Log = chronologisch), dann auf maxProcesses begrenzen
+      const lastCaseIds = caseIdOrder.slice(-maxProcesses);
+      filteredLines = lastCaseIds.flatMap(caseId => caseIdLines.get(caseId));
     }
 
     // Parse alle gefilterten Events
