@@ -10,7 +10,7 @@
     {
       "type": "text",
       "id": "Text_Header",
-      "text": "### Rechnung prüfen und validieren\nBitte prüfen Sie die erfassten Rechnungsdaten und erteilen Sie die Freigabe oder lehnen Sie die Rechnung ab.\n\n📄 [Original-Rechnung als PDF anzeigen](http://localhost:4000/invoices/test-invoice.pdf)"
+      "text": "### Rechnung prüfen und validieren\nBitte vergleichen Sie die erfassten Rechnungsdaten mit dem Originaldokument unten und treffen Sie eine Entscheidung."
     },
     {
       "type": "text",
@@ -18,23 +18,30 @@
       "text": "**Rechnungsübersicht**\n- Rechnungs-ID: `{{invoiceId}}`\n- Lieferant: `{{supplierName}}`\n- Rechnungsnummer: `{{invoiceNumber}}`\n- Betrag: `{{amountEuro}} €`\n- Datum: `{{invoiceDate}}`\n- ERP-Referenz: `{{erpReferenzNummer}}`"
     },
     {
+      "type": "image",
+      "id": "Image_PDFPreview",
+      "source": "=pdfImageDataUri",
+      "alt": "Originaldokument"
+    },
+    {
       "type": "radio",
-      "id": "Field_freigabeEntscheidung",
-      "key": "freigabeEntscheidung",
+      "id": "Field_validierungErgebnis",
+      "key": "validierungErgebnis",
       "label": "Entscheidung",
       "validate": {
         "required": true
       },
       "values": [
-        { "label": "Freigabe erteilen — Zahlung veranlassen", "value": "genehmigt" },
-        { "label": "Rechnung ablehnen — Prozess beenden",     "value": "abgelehnt" }
+        { "label": "Freigabe erteilen — Prozess fortsetzen",        "value": "genehmigt" },
+        { "label": "Info beim Lieferanten anfragen (erst danach freigeben)", "value": "info" },
+        { "label": "Rechnung ablehnen — Prozess beenden",            "value": "abgelehnt" }
       ]
     },
     {
       "type": "textfield",
       "id": "Field_freigebenderName",
       "key": "freigebenderName",
-      "label": "Ihr Name (Freigebende Person)",
+      "label": "Ihr Name (Prüfende Person)",
       "validate": {
         "required": true
       }
@@ -43,17 +50,7 @@
       "type": "textarea",
       "id": "Field_freigabeKommentar",
       "key": "freigabeKommentar",
-      "label": "Begründung / Kommentar (Pflicht bei Ablehnung)"
-    },
-    {
-      "type": "checkbox",
-      "id": "Field_infoNeeded",
-      "key": "infoNeeded",
-      "label": "Information vom Lieferanten erforderlich",
-      "defaultValue": false,
-      "validate": {
-        "required": false
-      }
+      "label": "Begründung / Kommentar (Pflicht bei Ablehnung oder Rückfrage)"
     }
   ]
 }

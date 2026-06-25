@@ -206,7 +206,7 @@ npm run ai:create-invoice      # Test-PDF generieren
 In `.env` eintragen (Standard — n8n benötigt keine zusätzliche Config):
 ```
 AI_PROVIDER=n8n                           # Standard: n8n + Gemini
-N8N_WEBHOOK_URL=https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+N8N_WEBHOOK_URL=https://dominikwipfler.app.n8n.cloud/webhook/invoice-extract
 AI_CONFIDENCE_THRESHOLD=0.8
 
 # Optional für Claude API Alternative:
@@ -256,7 +256,7 @@ Der **n8n-basierte Workflow ist der Standard-Provider** für die PDF-Rechnungsda
 
 Der n8n Workflow läuft auf der Production URL:
 ```
-https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+https://dominikwipfler.app.n8n.cloud/webhook/invoice-extract
 ```
 
 **Workflow-Struktur (n8n SaaS):**
@@ -273,11 +273,18 @@ https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
   "invoiceNumber": "<string|null>",
   "amountEuro": <number|null>,
   "invoiceDate": "<string|null>",
+  "lineItems": [
+    { "beschreibung": "<string>", "menge": <number>, "einheit": "<string>", "einzelpreis": <number> }
+  ],
   "aiConfidence": <number 0-1>,
   "requiresHumanReview": <boolean>,
   "aiExtractionDone": true
 }
 ```
+
+Pflichtfelder (werden vom Worker hart geprüft): `aiConfidence`, `requiresHumanReview`, `aiExtractionDone`.
+`lineItems` liefert die Rechnungspositionen mit den deutschen Schlüsseln `beschreibung`, `menge`,
+`einheit`, `einzelpreis` (der RPA-Bot füllt damit das ERP-Formular).
 
 ### Provider wechseln
 
@@ -286,7 +293,7 @@ Zwei Provider sind verfügbar und liefern **identisches Output-Format**. Die Wah
 ```bash
 # n8n + Gemini (Standard — keine extra Config nötig):
 AI_PROVIDER=n8n
-N8N_WEBHOOK_URL=https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+N8N_WEBHOOK_URL=https://dominikwipfler.app.n8n.cloud/webhook/invoice-extract
 
 # Claude API (Alternative für höhere Genauigkeit):
 AI_PROVIDER=claude

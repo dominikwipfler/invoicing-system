@@ -19,8 +19,8 @@
     },
     {
       "type": "radio",
-      "id": "Field_freigabeEntscheidung",
-      "key": "freigabeEntscheidung",
+      "id": "Field_complianceErgebnis",
+      "key": "complianceErgebnis",
       "label": "Entscheidung",
       "validate": {
         "required": true

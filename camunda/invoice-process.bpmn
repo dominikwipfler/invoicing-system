@@ -229,7 +229,7 @@
     </bpmn:userTask>
 
     <!-- Gateway: Prüfung bestanden? -->
-    <bpmn:exclusiveGateway id="GW_ValidateDecision" name="Prüfung&#10;bestanden?" default="Flow_ValidateDecision_GWInfo">
+    <bpmn:exclusiveGateway id="GW_ValidateDecision" name="Prüfung&#10;bestanden?" default="Flow_ValidateDecision_Abgewiesen">
       <bpmn:incoming>Flow_Validate_GWDecision</bpmn:incoming>
       <bpmn:outgoing>Flow_ValidateDecision_GWInfo</bpmn:outgoing>
       <bpmn:outgoing>Flow_ValidateDecision_Abgewiesen</bpmn:outgoing>
@@ -303,7 +303,7 @@
     </bpmn:userTask>
 
     <!-- Gateway: Compliance OK? -->
-    <bpmn:exclusiveGateway id="GW_ComplianceDecision" name="Compliance&#10;OK?" default="Flow_ComplianceDecision_Join2">
+    <bpmn:exclusiveGateway id="GW_ComplianceDecision" name="Compliance&#10;OK?" default="Flow_ComplianceDecision_Fail">
       <bpmn:incoming>Flow_Compliance_Decision</bpmn:incoming>
       <bpmn:outgoing>Flow_ComplianceDecision_Join2</bpmn:outgoing>
       <bpmn:outgoing>Flow_ComplianceDecision_Fail</bpmn:outgoing>
@@ -486,17 +486,15 @@
 
     <!-- Validierung -->
     <bpmn:sequenceFlow id="Flow_Validate_GWDecision"      sourceRef="Task_Validate"         targetRef="GW_ValidateDecision"/>
-    <bpmn:sequenceFlow id="Flow_ValidateDecision_GWInfo" name="ja" sourceRef="GW_ValidateDecision" targetRef="GW_InfoNeeded">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_ValidateDecision_GWInfo" name="genehmigt / Info" sourceRef="GW_ValidateDecision" targetRef="GW_InfoNeeded">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=validierungErgebnis = "genehmigt" or validierungErgebnis = "info"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ValidateDecision_Abgewiesen" name="nein" sourceRef="GW_ValidateDecision" targetRef="Task_NotifyAbgewiesen">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ValidateDecision_Abgewiesen" name="nein (Default)" sourceRef="GW_ValidateDecision" targetRef="Task_NotifyAbgewiesen"/>
     <bpmn:sequenceFlow id="Flow_NotifyAbgewiesen_End" sourceRef="Task_NotifyAbgewiesen" targetRef="End_Abgewiesen"/>
 
     <!-- Info-Anfrage (jetzt VOR dem Compliance Check) -->
-    <bpmn:sequenceFlow id="Flow_GWInfo_Request" name="ja" sourceRef="GW_InfoNeeded"          targetRef="Task_RequestInfo">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=infoNeeded = true</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_GWInfo_Request" name="Info anfragen" sourceRef="GW_InfoNeeded"          targetRef="Task_RequestInfo">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=validierungErgebnis = "info"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_GWInfo_Skip" name="nein"  sourceRef="GW_InfoNeeded"          targetRef="GW_ComplianceNeeded"/>
     <bpmn:sequenceFlow id="Flow_Request_Receive"          sourceRef="Task_RequestInfo"        targetRef="Task_ReceiveInfo"/>
@@ -509,22 +507,18 @@
     <bpmn:sequenceFlow id="Flow_GWCompliance_Skip" name="nein" sourceRef="GW_ComplianceNeeded" targetRef="GW_Join2"/>
     <bpmn:sequenceFlow id="Flow_Compliance_Decision"      sourceRef="Task_Compliance"        targetRef="GW_ComplianceDecision"/>
     <bpmn:sequenceFlow id="Flow_ComplianceDecision_Join2" name="OK" sourceRef="GW_ComplianceDecision" targetRef="GW_Join2">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=complianceErgebnis = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ComplianceDecision_Fail" name="nicht OK" sourceRef="GW_ComplianceDecision" targetRef="Task_NotifyComplianceFail">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ComplianceDecision_Fail" name="nicht OK (Default)" sourceRef="GW_ComplianceDecision" targetRef="Task_NotifyComplianceFail"/>
     <bpmn:sequenceFlow id="Flow_NotifyComplianceFail_End" sourceRef="Task_NotifyComplianceFail" targetRef="End_ComplianceFail"/>
     <bpmn:sequenceFlow id="Flow_Join2_Approve"            sourceRef="GW_Join2"               targetRef="Task_Approve"/>
 
     <!-- Freigabe und ERP -->
     <bpmn:sequenceFlow id="Flow_Approve_GWDecision"       sourceRef="Task_Approve"            targetRef="GW_ApproveDecision"/>
     <bpmn:sequenceFlow id="Flow_ApproveDecision_ERP" name="ja" sourceRef="GW_ApproveDecision" targetRef="Task_EnterERP">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "genehmigt"</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeErgebnis = "genehmigt"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ApproveDecision_Reject" name="nein" sourceRef="GW_ApproveDecision" targetRef="Task_NotifyAbgelehnt">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=freigabeEntscheidung = "abgelehnt"</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ApproveDecision_Reject" name="nein (Default)" sourceRef="GW_ApproveDecision" targetRef="Task_NotifyAbgelehnt"/>
     <bpmn:sequenceFlow id="Flow_NotifyAbgelehnt_End"      sourceRef="Task_NotifyAbgelehnt"   targetRef="End_Abgelehnt"/>
     <bpmn:sequenceFlow id="Flow_ERPFehler_Manual"         sourceRef="Boundary_ERPFehler"     targetRef="Task_ManualERP"/>
     <bpmn:sequenceFlow id="Flow_ERP_Payment"              sourceRef="Task_EnterERP"           targetRef="Task_Payment"/>

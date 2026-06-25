@@ -112,7 +112,7 @@ Automatische PDF-Rechnungsdaten-Extraktion mit zwei verfügbaren KI-Providern:
 ```powershell
 # In .env (Standard — keine zusätzliche Konfiguration nötig):
 AI_PROVIDER=n8n
-N8N_WEBHOOK_URL=https://leonjungkind0909.app.n8n.cloud/webhook/invoice-extract
+N8N_WEBHOOK_URL=https://dominikwipfler.app.n8n.cloud/webhook/invoice-extract
 ```
 
 **Dies ist der Standard-Provider.** Nutzt n8n Webhook mit Google Gemini für schnelle, kostengünstige Dokumentenanalyse.
